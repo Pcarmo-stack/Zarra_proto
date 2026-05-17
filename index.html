@@ -110,54 +110,74 @@
       #screen-intro {
         z-index: 50;
         background:
-          radial-gradient(ellipse at 50% 38%, #3a240e 0%, #1a1208 70%),
+          radial-gradient(ellipse at 50% 30%, #3a240e 0%, #1a1208 68%),
           var(--bg);
         text-align: center;
       }
-      .intro-inner { max-width: 22rem; }
+      .intro-inner {
+        max-width: 20rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+      }
+      .intro-eyebrow {
+        font-size: 0.6rem;
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+        color: rgba(253, 246, 227, 0.38);
+        margin: 0 0 1.6rem;
+      }
       .intro-orn {
-        width: 64px;
+        width: 48px;
         margin: 0 auto 1.2rem;
-        opacity: 0.7;
-        filter: brightness(1.15) saturate(0.7);
+        opacity: 0.55;
+        filter: brightness(1.1) saturate(0.6);
       }
       .intro-mark {
         font-family: var(--font-display);
-        font-size: 4.2rem;
-        letter-spacing: 0.18em;
+        font-size: clamp(2rem, 8vw, 2.8rem);
+        letter-spacing: 0.14em;
         color: #fdf6e3;
         line-height: 1;
-        margin: 0 0 0.3rem;
+        margin: 0 0 0.55rem;
+      }
+      .intro-rule {
+        width: 28px;
+        height: 1px;
+        background: rgba(228, 128, 67, 0.5);
+        margin: 0 auto 0.9rem;
       }
       .intro-sub {
-        font-weight: 300; font-style: italic;
-        font-size: 1rem;
-        letter-spacing: 0.08em;
-        color: rgba(253, 246, 227, 0.6);
-        margin: 0 0 2.6rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(253, 246, 227, 0.42);
+        margin: 0 0 2.4rem;
       }
       .intro-cta {
         font-family: var(--font-display);
-        font-size: 1.3rem;
-        letter-spacing: 0.22em;
+        font-size: 0.82rem;
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
         color: #fdf6e3;
         background: var(--orange);
-        padding: 0.95rem 2.4rem;
+        padding: 0.9rem 2rem;
         border-radius: 999px;
-        box-shadow: 0 8px 28px rgba(228, 128, 67, 0.35);
+        box-shadow: 0 6px 24px rgba(228, 128, 67, 0.32);
         transition: transform var(--t-fast) var(--ease),
                     box-shadow var(--t-fast) var(--ease);
       }
       .intro-cta:active {
-        transform: translateY(1px) scale(0.98);
-        box-shadow: 0 4px 16px rgba(228, 128, 67, 0.25);
+        transform: translateY(1px) scale(0.97);
+        box-shadow: 0 3px 12px rgba(228, 128, 67, 0.22);
       }
       .intro-hint {
-        margin-top: 1.6rem;
-        font-size: 0.72rem;
-        letter-spacing: 0.18em;
+        margin-top: 1.4rem;
+        font-size: 0.6rem;
+        letter-spacing: 0.22em;
         text-transform: uppercase;
-        color: rgba(253, 246, 227, 0.4);
+        color: rgba(253, 246, 227, 0.28);
       }
 
       /* ----------  STATE 2 · SCANNING  ---------- */
@@ -460,7 +480,7 @@
       #screen-cards.is-active .card:nth-child(3) { animation-delay: 0.22s; }
       #screen-cards.is-active .card:nth-child(4) { animation-delay: 0.31s; }
 
-      /* Image — absolute, fills card, blends into the colour */
+      /* Image — absolute, fills card, no blend mode so it pops against the colour */
       .card-art {
         position: absolute;
         inset: 0;
@@ -470,25 +490,24 @@
         pointer-events: none;
       }
       .card-art img {
-        width: 70%;
-        height: 70%;
+        width: 72%;
+        height: 72%;
         object-fit: contain;
-        opacity: 0.58;
-        mix-blend-mode: screen;
+        opacity: 0.92;
         transform: translateY(-6%);
-        filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35));
+        filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55)) brightness(1.08) contrast(1.05);
       }
 
-      /* Gradient: transparent top → solid card colour at bottom for text legibility */
+      /* Gradient: only the bottom third darkens for text legibility */
       .card::after {
         content: '';
         position: absolute;
         inset: 0;
         background: linear-gradient(
           to bottom,
-          transparent 20%,
-          rgba(0, 0, 0, 0.15) 55%,
-          rgba(0, 0, 0, 0.55) 100%
+          transparent 40%,
+          rgba(0, 0, 0, 0.25) 65%,
+          rgba(0, 0, 0, 0.72) 100%
         );
         pointer-events: none;
       }
@@ -566,11 +585,32 @@
 
       /* ----------  STATE 6 · COMMUNITY POPUP  ---------- */
       #screen-community {
-        background:
-          linear-gradient(rgba(10, 7, 3, 0.55), rgba(10, 7, 3, 0.55)),
-          url('./assets/landscape.jpg') center/cover;
+        background: #0a0703;
+        overflow: hidden;
+      }
+      /* Parallax background image — moved by deviceorientation JS */
+      .community-bg {
+        position: absolute;
+        top: -12%; left: -12%;
+        width: 124%; height: 124%;
+        object-fit: cover;
+        filter: brightness(0.42);
+        will-change: transform;
+        z-index: 0;
+        pointer-events: none;
+      }
+      /* Dark overlay so popup text stays readable */
+      #screen-community::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 7, 3, 0.38);
+        z-index: 1;
+        pointer-events: none;
       }
       .popup {
+        position: relative;
+        z-index: 2;
         background: var(--cream);
         border-radius: 22px;
         /* warm hairline + deep shadow — no coloured border */
@@ -782,8 +822,10 @@
          ============================================================ -->
     <section id="screen-intro" class="screen is-active">
       <div class="intro-inner">
-        <h1 class="intro-mark" data-copy="intro.mark">Hello!</h1>
-        <p class="intro-sub"   data-copy="intro.sub">Ready for a new experience?</p>
+        <p class="intro-eyebrow">ALBA · Trigo con Naranja</p>
+        <h1 class="intro-mark" data-copy="intro.mark">Welcome</h1>
+        <div class="intro-rule"></div>
+        <p class="intro-sub" data-copy="intro.sub">Are You Ready?</p>
         <button class="intro-cta" id="start-btn" data-copy="intro.cta">Scan to enter</button>
         <p class="intro-hint" data-copy="intro.hint">No app needed · Camera will open</p>
       </div>
@@ -859,6 +901,7 @@
          STATE 6 · COMMUNITY POPUP
          ============================================================ -->
     <section id="screen-community" class="screen">
+      <img id="community-bg" class="community-bg" src="./assets/landscape.jpg" alt="">
       <div class="popup">
         <div class="popup-mark">✦</div>
         <div class="popup-num" data-copy="community.num">7,243</div>
@@ -971,6 +1014,19 @@
       });
 
       /* ============================================================
+         SOUND CONFIG  ·  set any value to a file path to override
+         the built-in synthesised sound with a real audio file.
+         Example: tap: './assets/sfx-tap.mp3'
+         ============================================================ */
+      const SOUNDS = {
+        tap:        null,
+        swipe:      null,
+        reveal:     null,
+        hint:       null,
+        transition: null,
+      };
+
+      /* ============================================================
          SOUND ENGINE  ·  Web Audio API — no extra files needed
          ============================================================ */
       const SFX = (() => {
@@ -1039,8 +1095,23 @@
           },
         };
 
+        // Preload any configured audio files
+        const preloaded = {};
+        Object.entries(SOUNDS).forEach(([name, src]) => {
+          if (src) {
+            const a = new Audio(src);
+            a.preload = 'auto';
+            preloaded[name] = a;
+          }
+        });
+
         return {
           play(name) {
+            if (preloaded[name]) {
+              preloaded[name].currentTime = 0;
+              preloaded[name].play().catch(() => {});
+              return;
+            }
             try { init(); sounds[name] && sounds[name](); } catch (_) {}
           },
         };
@@ -1177,8 +1248,25 @@
       /* ============================================================
          WIRING
          ============================================================ */
+      /* ============================================================
+         PARALLAX  ·  moves the community background with phone tilt
+         ============================================================ */
+      const communityBg = document.getElementById('community-bg');
+      let pX = 0, pY = 0;
+      window.addEventListener('deviceorientation', (e) => {
+        if (state !== 'community' || !communityBg) return;
+        pX = Math.max(-18, Math.min(18, (e.gamma || 0) * 0.55));
+        pY = Math.max(-14, Math.min(14, ((e.beta  || 0) - 45) * 0.38));
+        communityBg.style.transform = `translate(${pX}px, ${pY}px)`;
+      }, { passive: true });
+
       document.getElementById('start-btn').addEventListener('click', async () => {
         SFX.play('tap');
+        // Request DeviceOrientation permission on iOS 13+ (must be inside gesture handler)
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+          DeviceOrientationEvent.requestPermission().catch(() => {});
+        }
         goTo('scan');
         const startMindAR = async () => {
           try {
