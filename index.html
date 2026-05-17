@@ -306,12 +306,56 @@
       /* ----------  STATE 4 · VALLEY  ---------- */
       #screen-valley {
         background: transparent;
-        z-index: 6; /* sit on top of the video */
+        z-index: 6;
         align-items: end;
         padding-bottom: calc(env(safe-area-inset-bottom, 0) + 2rem);
-        pointer-events: none; /* only active once video ends */
+        pointer-events: none;
       }
-      #screen-valley.show-hint { pointer-events: auto; }
+
+      /* Controls row — mute left, skip right */
+      .valley-controls {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0) + 1.2rem);
+        left: 0; right: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 1.4rem;
+        pointer-events: auto;
+        opacity: 0;
+        transition: opacity 0.6s ease 1.4s; /* fade in 1.4 s after video starts */
+      }
+      #screen-valley.is-active .valley-controls  { opacity: 1; }
+      #screen-valley.show-hint .valley-controls  {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease 0s; /* fast exit when hint shows */
+      }
+
+      .valley-ctrl-btn {
+        appearance: none;
+        border: 1px solid rgba(253, 246, 227, 0.35);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        color: #fdf6e3;
+        font-family: var(--font-body);
+        font-size: 0.68rem;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        padding: 0.55rem 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.15s ease, transform 0.12s ease;
+      }
+      .valley-ctrl-btn:active { transform: scale(0.95); background: rgba(0,0,0,0.55); }
+
+      /* "Tap to continue / skip" pill — bottom-centre */
       .valley-hint {
         font-size: 0.72rem;
         letter-spacing: 0.32em;
@@ -323,11 +367,12 @@
         border-radius: 999px;
         background: rgba(0, 0, 0, 0.35);
         backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         opacity: 0;
-        transition: opacity 0.5s ease;
+        pointer-events: none;
       }
-      /* Hint fades in and breathes once show-hint is set */
       #screen-valley.show-hint .valley-hint {
+        pointer-events: auto;
         animation: hint-breathe 2.6s ease-in-out 0.3s infinite;
         animation-fill-mode: forwards;
       }
@@ -660,7 +705,20 @@
          STATE 4 · VALLEY
          ============================================================ -->
     <section id="screen-valley" class="screen">
-      <div class="valley-hint" data-copy="valley.hint">Tap to continue</div>
+      <!-- Mute + Skip controls — visible during playback, hidden when hint shows -->
+      <div class="valley-controls">
+        <button class="valley-ctrl-btn" id="valley-mute-btn" aria-label="Toggle mute">
+          <svg id="icon-sound-on" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          <svg id="icon-sound-off" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+          <span id="mute-label">Sound</span>
+        </button>
+        <button class="valley-ctrl-btn" id="valley-skip-btn" aria-label="Skip video">
+          Skip
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
+      </div>
+      <!-- End-of-experience pill -->
+      <div class="valley-hint">Tap to continue</div>
     </section>
 
     <!-- ============================================================
@@ -852,19 +910,35 @@
         state = next;
       }
 
-      // Video ends → freeze on last frame, start 5 s countdown for "Tap to skip"
+      // Video ends → freeze on last frame, start 5 s countdown then show "Tap to continue"
       valleyVideo.addEventListener('ended', () => {
         skipTimer = setTimeout(() => {
           if (state === 'valley' && !hintVisible) {
-            showValleyHint('Tap to skip');
+            showValleyHint('Tap to continue');
           }
         }, 5000);
       });
 
-      // Audio ends → upgrade/show "Tap to continue"
+      // Audio ends → show / upgrade to "Tap to continue"
       valleyAudio.addEventListener('ended', () => {
         clearTimeout(skipTimer);
         showValleyHint('Tap to continue');
+      });
+
+      // Mute toggle
+      document.getElementById('valley-mute-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        valleyAudio.muted = !valleyAudio.muted;
+        document.getElementById('icon-sound-on').style.display  = valleyAudio.muted ? 'none'  : '';
+        document.getElementById('icon-sound-off').style.display = valleyAudio.muted ? ''      : 'none';
+        document.getElementById('mute-label').textContent       = valleyAudio.muted ? 'Muted' : 'Sound';
+      });
+
+      // Skip — immediately advances to cards, stops video + audio via goTo cleanup
+      document.getElementById('valley-skip-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        goTo('cards');
+        showCard(0);
       });
 
       function showCard(idx) {
