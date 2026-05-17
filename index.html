@@ -608,9 +608,18 @@
         z-index: 1;
         pointer-events: none;
       }
+      /* Particle canvas — floats above overlay, below popup */
+      #community-particles {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 2;
+      }
       .popup {
         position: relative;
-        z-index: 2;
+        z-index: 3;
         background: var(--cream);
         border-radius: 22px;
         /* warm hairline + deep shadow — no coloured border */
@@ -902,6 +911,7 @@
          ============================================================ -->
     <section id="screen-community" class="screen">
       <img id="community-bg" class="community-bg" src="./assets/landscape.jpg" alt="">
+      <canvas id="community-particles"></canvas>
       <div class="popup">
         <div class="popup-mark">✦</div>
         <div class="popup-num" data-copy="community.num">7,243</div>
@@ -1027,82 +1037,126 @@
       };
 
       /* ============================================================
-         SOUND ENGINE  ·  Web Audio API — no extra files needed
+         SOUND ENGINE  ·  Web Audio API synthesiser
+         All sounds routed through a shared compressor for consistent
+         loudness. Override any with a file path in SOUNDS above.
          ============================================================ */
       const SFX = (() => {
         let ctx = null;
+        let out = null; // compressor → destination
 
         function init() {
-          if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+          if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const comp = ctx.createDynamicsCompressor();
+            comp.threshold.value = -10;
+            comp.knee.value      =   6;
+            comp.ratio.value     =   3;
+            comp.attack.value    = 0.003;
+            comp.release.value   = 0.12;
+            comp.connect(ctx.destination);
+            out = comp;
+          }
           if (ctx.state === 'suspended') ctx.resume();
         }
 
-        function tone(freq, type, gainVal, duration, freqEnd) {
-          const now = ctx.currentTime;
-          const osc  = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain); gain.connect(ctx.destination);
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, now);
-          if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
-          gain.gain.setValueAtTime(gainVal, now);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-          osc.start(now); osc.stop(now + duration);
+        /* Bell partial: sine oscillator with crisp attack + exponential decay */
+        function bell(freq, amp, decay, startOffset = 0) {
+          const t   = ctx.currentTime + startOffset;
+          const osc = ctx.createOscillator();
+          const g   = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(amp, t + 0.006); // 6 ms attack — crisp
+          g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+          osc.connect(g); g.connect(out);
+          osc.start(t); osc.stop(t + decay + 0.02);
         }
 
         const sounds = {
-          // Soft button tap
+          /* ── TAP ─────────────────────────────────────────────────
+             Glass-chime click: fundamental + octave + fifth.
+             Feels like a high-quality UI crystal tap.          */
           tap() {
-            tone(900, 'sine', 0.14, 0.10, 500);
+            bell(880,  0.22, 0.30);        // fundamental  A5
+            bell(1760, 0.07, 0.18);        // octave       A6
+            bell(1320, 0.04, 0.14);        // fifth        E6
           },
-          // Card swipe — quick filtered noise burst
+
+          /* ── SWIPE ───────────────────────────────────────────────
+             Silk ribbon whoosh: shaped white noise through a
+             narrow high-pass, with a crystal tail at the end.  */
           swipe() {
             const now = ctx.currentTime;
-            const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
-            const data = buf.getChannelData(0);
-            for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-            const src    = ctx.createBufferSource();
-            const filter = ctx.createBiquadFilter();
-            const gain   = ctx.createGain();
-            src.buffer = buf;
-            filter.type = 'bandpass'; filter.frequency.value = 1800; filter.Q.value = 0.8;
-            gain.gain.setValueAtTime(0.18, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-            src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+            const sr  = ctx.sampleRate;
+            const dur = 0.10;
+            const buf = ctx.createBuffer(1, sr * dur, sr);
+            const d   = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) {
+              const env = i < d.length * 0.08 ? i / (d.length * 0.08)
+                        : i > d.length * 0.65 ? 1 - (i / d.length - 0.65) / 0.35
+                        : 1;
+              d[i] = (Math.random() * 2 - 1) * env;
+            }
+            const src = ctx.createBufferSource(); src.buffer = buf;
+            const hp  = ctx.createBiquadFilter();
+            hp.type = 'highpass'; hp.frequency.value = 3800; hp.Q.value = 0.6;
+            const lp  = ctx.createBiquadFilter();
+            lp.type = 'lowpass';  lp.frequency.value = 10000;
+            const g   = ctx.createGain();
+            g.gain.setValueAtTime(0.20, now);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+            src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(out);
             src.start(now);
+            // Crystal chime tail
+            bell(2093, 0.055, 0.26, 0.07); // C7
           },
-          // Gentle ascending chord when cards appear
+
+          /* ── REVEAL ──────────────────────────────────────────────
+             Music-box arpeggio: four soft bell notes ascending in
+             a C-major chord. Each note has a shimmer harmonic.  */
           reveal() {
-            [440, 554, 659].forEach((f, i) => {
-              const now  = ctx.currentTime + i * 0.07;
-              const osc  = ctx.createOscillator();
-              const gain = ctx.createGain();
-              osc.connect(gain); gain.connect(ctx.destination);
-              osc.type = 'sine'; osc.frequency.value = f;
-              gain.gain.setValueAtTime(0, now);
-              gain.gain.linearRampToValueAtTime(0.07, now + 0.06);
-              gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-              osc.start(now); osc.stop(now + 0.55);
-            });
+            [[523.25, 0], [659.25, 0.09], [783.99, 0.18], [1046.5, 0.27]]
+              .forEach(([f, offset]) => {
+                bell(f,     0.13, 0.75, offset);       // fundamental
+                bell(f * 2, 0.04, 0.38, offset + 0.01); // shimmer
+              });
           },
-          // Soft ding for "tap to continue" hint
+
+          /* ── HINT ────────────────────────────────────────────────
+             Singing-bowl tone: warm A4 + E5 perfect fifth.
+             Long, calm, meditative — invites the user forward.  */
           hint() {
-            tone(660, 'sine', 0.13, 0.55, 540);
+            bell(440,  0.17, 1.10);  // A4 — warm root
+            bell(659,  0.10, 0.85);  // E5 — perfect fifth
+            bell(880,  0.04, 0.50);  // A5 — octave shimmer
           },
-          // Warm low whoosh for screen transitions
+
+          /* ── TRANSITION ──────────────────────────────────────────
+             Upward pitch glide that lands on a soft bell note.
+             Feels like something snapping pleasantly into place. */
           transition() {
-            tone(180, 'sine', 0.09, 0.30, 520);
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const g   = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300,  now);
+            osc.frequency.exponentialRampToValueAtTime(1046, now + 0.10);
+            osc.frequency.exponentialRampToValueAtTime(880,  now + 0.20);
+            g.gain.setValueAtTime(0, now);
+            g.gain.linearRampToValueAtTime(0.20, now + 0.04);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+            osc.connect(g); g.connect(out);
+            osc.start(now); osc.stop(now + 0.58);
+            bell(880, 0.09, 0.32, 0.18); // landing chime
           },
         };
 
         // Preload any configured audio files
         const preloaded = {};
         Object.entries(SOUNDS).forEach(([name, src]) => {
-          if (src) {
-            const a = new Audio(src);
-            a.preload = 'auto';
-            preloaded[name] = a;
-          }
+          if (src) { const a = new Audio(src); a.preload = 'auto'; preloaded[name] = a; }
         });
 
         return {
@@ -1197,6 +1251,9 @@
         document.getElementById('screen-' + next).classList.add('is-active');
         body.dataset.state = next;
         state = next;
+
+        if (next === 'community') Particles.start();
+        else Particles.stop();
       }
 
       // Video ends → smooth CSS zoom-out, hint appears immediately
@@ -1246,27 +1303,74 @@
       }
 
       /* ============================================================
+         PARTICLES  ·  soft floating motes on the community screen
+         ============================================================ */
+      const Particles = (() => {
+        const COLORS  = ['#fdf6e3', '#e8d5a8', '#c9a961', '#f4e7c9'];
+        const COUNT   = 38;
+        let raf = null, tick = 0, items = [], cvs = null, c2d = null;
+
+        function make(initPhase) {
+          const w = cvs.width, h = cvs.height;
+          return {
+            x:       Math.random() * w,
+            y:       initPhase ? Math.random() * (h + 80) - 40 : h + 8,
+            r:       0.5 + Math.random() * 2.0,
+            vy:      -(0.13 + Math.random() * 0.25),
+            vx:      (Math.random() - 0.5) * 0.10,
+            phase:   Math.random() * Math.PI * 2,
+            life:    0,
+            maxLife: 190 + Math.random() * 210,
+            color:   COLORS[Math.floor(Math.random() * COLORS.length)],
+          };
+        }
+
+        function loop() {
+          if (!cvs || !c2d) { raf = null; return; }
+          c2d.clearRect(0, 0, cvs.width, cvs.height);
+          items.forEach((p, i) => {
+            p.life++;
+            p.y += p.vy;
+            p.x += p.vx + Math.sin(p.phase + tick * 0.006) * 0.09;
+            if (p.life >= p.maxLife || p.y < -8) { items[i] = make(false); return; }
+            const ratio = p.life / p.maxLife;
+            const alpha = ratio < 0.15 ? ratio / 0.15
+                        : ratio > 0.78 ? 1 - (ratio - 0.78) / 0.22
+                        : 1;
+            c2d.save();
+            c2d.globalAlpha = alpha * 0.65;
+            c2d.fillStyle   = p.color;
+            c2d.beginPath();
+            c2d.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            c2d.fill();
+            c2d.restore();
+          });
+          tick++;
+          raf = requestAnimationFrame(loop);
+        }
+
+        return {
+          start() {
+            cvs = document.getElementById('community-particles');
+            if (!cvs) return;
+            cvs.width  = cvs.offsetWidth  || window.innerWidth;
+            cvs.height = cvs.offsetHeight || window.innerHeight;
+            c2d   = cvs.getContext('2d');
+            items = Array.from({ length: COUNT }, () => make(true));
+            tick  = 0;
+            if (!raf) raf = requestAnimationFrame(loop);
+          },
+          stop() {
+            if (raf) { cancelAnimationFrame(raf); raf = null; }
+          },
+        };
+      })();
+
+      /* ============================================================
          WIRING
          ============================================================ */
-      /* ============================================================
-         PARALLAX  ·  moves the community background with phone tilt
-         ============================================================ */
-      const communityBg = document.getElementById('community-bg');
-      let pX = 0, pY = 0;
-      window.addEventListener('deviceorientation', (e) => {
-        if (state !== 'community' || !communityBg) return;
-        pX = Math.max(-18, Math.min(18, (e.gamma || 0) * 0.55));
-        pY = Math.max(-14, Math.min(14, ((e.beta  || 0) - 45) * 0.38));
-        communityBg.style.transform = `translate(${pX}px, ${pY}px)`;
-      }, { passive: true });
-
       document.getElementById('start-btn').addEventListener('click', async () => {
         SFX.play('tap');
-        // Request DeviceOrientation permission on iOS 13+ (must be inside gesture handler)
-        if (typeof DeviceOrientationEvent !== 'undefined' &&
-            typeof DeviceOrientationEvent.requestPermission === 'function') {
-          DeviceOrientationEvent.requestPermission().catch(() => {});
-        }
         goTo('scan');
         const startMindAR = async () => {
           try {
