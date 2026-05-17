@@ -311,7 +311,7 @@
         padding-bottom: calc(env(safe-area-inset-bottom, 0) + 2rem);
         pointer-events: none; /* only active once video ends */
       }
-      #screen-valley.video-ended { pointer-events: auto; }
+      #screen-valley.show-hint { pointer-events: auto; }
       .valley-hint {
         font-size: 0.72rem;
         letter-spacing: 0.32em;
@@ -324,10 +324,11 @@
         background: rgba(0, 0, 0, 0.35);
         backdrop-filter: blur(8px);
         opacity: 0;
+        transition: opacity 0.5s ease;
       }
-      /* Hint only breathes in once video has ended */
-      #screen-valley.video-ended .valley-hint {
-        animation: hint-breathe 2.4s ease-in-out 0.5s infinite;
+      /* Hint fades in and breathes once show-hint is set */
+      #screen-valley.show-hint .valley-hint {
+        animation: hint-breathe 2.6s ease-in-out 0.3s infinite;
         animation-fill-mode: forwards;
       }
       @keyframes hint-breathe {
@@ -685,10 +686,14 @@
       </div>
     </section>
 
-    <!-- Fullscreen valley video — shown when user enters the valley state -->
-    <video id="valley-video" playsinline webkit-playsinline preload="auto">
+    <!-- Fullscreen valley video (muted — audio comes from valley-audio) -->
+    <video id="valley-video" playsinline webkit-playsinline preload="auto" muted>
       <source src="./assets/valley-video.mp4" type="video/mp4">
     </video>
+    <!-- Valley background music — starts with video, outlasts it -->
+    <audio id="valley-audio" preload="auto">
+      <source src="./assets/valley-audio.mp3" type="audio/mpeg">
+    </audio>
 
     <button class="restart-btn" id="restart-btn" title="Restart">↺</button>
 
@@ -791,33 +796,54 @@
       const scene  = document.querySelector('a-scene');
       const target = document.querySelector('#target');
 
-      const valleyVideo = document.getElementById('valley-video');
+      const valleyVideo  = document.getElementById('valley-video');
+      const valleyAudio  = document.getElementById('valley-audio');
       const valleyScreen = document.getElementById('screen-valley');
-      let valleyVideoEnded = false;
+      const valleyHint   = valleyScreen.querySelector('.valley-hint');
+      let skipTimer      = null;
+      let hintVisible    = false;
+
+      function valleyCleanup() {
+        clearTimeout(skipTimer);
+        skipTimer  = null;
+        hintVisible = false;
+        valleyScreen.classList.remove('show-hint');
+        valleyAudio.pause();
+        valleyAudio.currentTime = 0;
+        valleyVideo.classList.remove('is-revealed');
+        setTimeout(() => {
+          valleyVideo.pause();
+          valleyVideo.style.display = 'none';
+          valleyVideo.currentTime   = 0;
+        }, 600);
+      }
+
+      function showValleyHint(text) {
+        hintVisible      = true;
+        valleyHint.textContent = text;
+        valleyScreen.classList.add('show-hint');
+      }
 
       function goTo(next) {
         if (next === state) return;
 
-        // Enter valley → reveal video with entrance animation
+        // Enter valley → start video + audio simultaneously
         if (next === 'valley') {
-          valleyVideoEnded = false;
           valleyVideo.currentTime = 0;
+          valleyAudio.currentTime = 0;
           valleyVideo.style.display = 'block';
-          // Double rAF ensures display:block is painted before transition starts
+          // Double rAF so display:block is painted before the CSS transition fires
           requestAnimationFrame(() => requestAnimationFrame(() => {
             valleyVideo.classList.add('is-revealed');
           }));
-          valleyVideo.play().catch((e) => console.log('valley video play failed:', e));
+          // Play both — audio unlocked by the same user-gesture chain
+          valleyVideo.play().catch((e) => console.warn('video play failed:', e));
+          valleyAudio.play().catch((e) => console.warn('audio play failed:', e));
         }
 
-        // Leave valley → fade video out then hide
+        // Leave valley → stop everything and fade out
         if (state === 'valley' && next !== 'valley') {
-          valleyScreen.classList.remove('video-ended');
-          valleyVideo.classList.remove('is-revealed');
-          setTimeout(() => {
-            valleyVideo.pause();
-            valleyVideo.style.display = 'none';
-          }, 600);
+          valleyCleanup();
         }
 
         document.querySelectorAll('.screen').forEach((s) => s.classList.remove('is-active'));
@@ -826,10 +852,19 @@
         state = next;
       }
 
-      // Video ends → show "Tap to continue", wait for input
+      // Video ends → freeze on last frame, start 5 s countdown for "Tap to skip"
       valleyVideo.addEventListener('ended', () => {
-        valleyVideoEnded = true;
-        valleyScreen.classList.add('video-ended');
+        skipTimer = setTimeout(() => {
+          if (state === 'valley' && !hintVisible) {
+            showValleyHint('Tap to skip');
+          }
+        }, 5000);
+      });
+
+      // Audio ends → upgrade/show "Tap to continue"
+      valleyAudio.addEventListener('ended', () => {
+        clearTimeout(skipTimer);
+        showValleyHint('Tap to continue');
       });
 
       function showCard(idx) {
@@ -871,7 +906,7 @@
       document.getElementById('detected-cta').addEventListener('click', () => goTo('valley'));
 
       document.getElementById('screen-valley').addEventListener('click', () => {
-        if (valleyVideoEnded) {
+        if (hintVisible) {
           goTo('cards');
           showCard(0);
         }
