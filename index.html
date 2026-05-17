@@ -405,7 +405,7 @@
 
       /* Carousel viewport — clips top/bottom, lets sides bleed for peek effect */
       .card-viewport {
-        height: 34vh;
+        height: 52vh;
         overflow: hidden;
         position: relative;
       }
@@ -446,7 +446,7 @@
       .card[data-color="sage"]   { --bg-color: var(--sage);   }
 
       .card-art {
-        flex: 0 0 44%;
+        flex: 0 0 34%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -487,6 +487,15 @@
         line-height: 1.42;
         color: rgba(255, 246, 228, 0.82);
         margin: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex: 1 1 auto;
+      }
+
+      /* Hide A-Frame fullscreen / VR / AR buttons */
+      .a-enter-vr, .a-enter-ar,
+      .a-enter-vr-button, .a-enter-ar-button {
+        display: none !important;
       }
 
       /* Progress + swipe hint strip below the cards */
