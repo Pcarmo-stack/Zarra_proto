@@ -283,9 +283,22 @@
         color: var(--ink-faint);
       }
 
+      /* ----------  VALLEY FULLSCREEN VIDEO  ---------- */
+      #valley-video {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 4; /* above a-scene (1), below .screen overlays (5) */
+        display: none;
+        background: #000;
+      }
+
       /* ----------  STATE 4 · VALLEY  ---------- */
       #screen-valley {
         background: transparent;
+        z-index: 6; /* sit on top of the video */
         align-items: end;
         padding-bottom: calc(env(safe-area-inset-bottom, 0) + 2rem);
       }
@@ -531,7 +544,7 @@
          enters the 'valley' state.
          ============================================================ -->
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10; warmupTolerance: 4;"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.005; missTolerance: 20; warmupTolerance: 3;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, alpha: true"
       vr-mode-ui="enabled: false"
@@ -552,10 +565,20 @@
 
       <a-entity id="target" mindar-image-target="targetIndex: 0">
         <a-entity id="valley-scene" billboard position="0 0 0">
-          <a-image src="#img-landscape"
-            position="0 0 -0.05" scale="0.8 1.6 1" opacity="0" transparent="true"
-            animation__op="property: opacity; to: 0.75; dur: 1400; easing: easeOutCubic; startEvents: ar-enter"
-            animation__exit_op="property: opacity; to: 0; dur: 500; startEvents: ar-exit"></a-image>
+          <!-- Parallax: outer entity drifts on Y, inner drifts on X -->
+          <a-entity
+            animation__drift_y="property: position; from: 0 -0.022 0; to: 0 0.022 0; dur: 11000; dir: alternate; loop: true; easing: easeInOutSine;">
+            <a-entity
+              animation__drift_x="property: position; from: -0.028 0 0; to: 0.028 0 0; dur: 9000; dir: alternate; loop: true; easing: easeInOutSine;">
+              <!-- Scale 0.52 × 1.125 preserves 740×1600 ratio and sits slightly smaller -->
+              <a-image src="#img-landscape"
+                position="0 0 -0.05" scale="0.52 1.125 1" opacity="0" transparent="true"
+                animation__op="property: opacity; to: 0.88; dur: 1400; easing: easeOutCubic; startEvents: ar-enter"
+                animation__exit_op="property: opacity; to: 0; dur: 500; startEvents: ar-exit"
+                animation__zoom="property: scale; from: 0.52 1.125 1; to: 0.572 1.238 1; dur: 14000; dir: alternate; loop: true; easing: easeInOutSine;">
+              </a-image>
+            </a-entity>
+          </a-entity>
           <a-entity id="particles">
             <a-circle radius="0.006" color="#ffd07a" opacity="0" position="-0.15 -0.25 0.01"
               animation__up="property: position; from: -0.15 -0.3 0.01; to: -0.18 0.4 0.01; dur: 6500; loop: true; easing: linear; delay: 1500; startEvents: ar-enter"
@@ -650,6 +673,12 @@
       </div>
     </section>
 
+    <!-- Fullscreen valley video — shown when user enters the valley state -->
+    <video id="valley-video" playsinline webkit-playsinline preload="metadata">
+      <source src="./assets/valley-video.webm" type="video/webm">
+      <source src="./assets/valley-video.mp4"  type="video/mp4">
+    </video>
+
     <button class="restart-btn" id="restart-btn" title="Restart">↺</button>
 
     <script>
@@ -675,7 +704,7 @@
           cta:      'Tap to continue',
           tag:      'No app needed',
         },
-        valley: { hint: 'Tap to continue' },
+        valley: { hint: 'Tap to skip' },
         cards: {
           tap: 'Tap to continue',
           items: [
@@ -751,23 +780,35 @@
       const scene  = document.querySelector('a-scene');
       const target = document.querySelector('#target');
 
+      const valleyVideo = document.getElementById('valley-video');
+
       function goTo(next) {
         if (next === state) return;
+
+        // Enter valley → play fullscreen video
         if (next === 'valley') {
-          target.querySelectorAll('a-image, a-circle').forEach((c) =>
-            c.dispatchEvent(new CustomEvent('ar-enter'))
-          );
+          valleyVideo.style.display = 'block';
+          valleyVideo.currentTime = 0;
+          valleyVideo.play().catch((e) => console.log('valley video play failed:', e));
         }
+
+        // Leave valley → stop and hide video
         if (state === 'valley' && next !== 'valley') {
-          target.querySelectorAll('a-image, a-circle').forEach((c) =>
-            c.dispatchEvent(new CustomEvent('ar-exit'))
-          );
+          valleyVideo.pause();
+          valleyVideo.style.display = 'none';
         }
+
         document.querySelectorAll('.screen').forEach((s) => s.classList.remove('is-active'));
         document.getElementById('screen-' + next).classList.add('is-active');
         body.dataset.state = next;
         state = next;
       }
+
+      // Auto-advance to cards when video finishes
+      valleyVideo.addEventListener('ended', () => {
+        goTo('cards');
+        showCard(0);
+      });
 
       function showCard(idx) {
         cardIndex = idx;
