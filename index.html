@@ -383,29 +383,76 @@
         100%     { opacity: 1; transform: translateY(0); }
       }
 
+      /* ----------  AR ANCHOR DOT  ---------- */
+      #ar-anchor {
+        position: fixed;
+        width: 54px; height: 54px;
+        border-radius: 50%;
+        border: 2px solid rgba(228, 128, 67, 0.9);
+        background: rgba(228, 128, 67, 0.14);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 6;
+        display: none;
+      }
+      #ar-anchor::before {
+        content: '';
+        position: absolute;
+        inset: 6px;
+        border-radius: 50%;
+        background: rgba(228, 128, 67, 0.35);
+      }
+      #ar-anchor::after {
+        content: '';
+        position: absolute;
+        inset: -12px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(228, 128, 67, 0.45);
+        animation: anchor-ring 1.9s ease-out infinite;
+      }
+      @keyframes anchor-ring {
+        0%   { transform: scale(1);   opacity: 0.7; }
+        100% { transform: scale(2.1); opacity: 0; }
+      }
+
       /* ----------  STATE 5 · CARDS  ---------- */
-      /* Transparent — AR cards live in the scene; this layer only carries dots + hint */
-      #screen-cards { background: transparent; }
-      .card-stage   { display: none; }
+      /* Transparent bg — camera feed shows through; card panel slides up from bottom */
+      #screen-cards {
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: stretch;
+        padding: 0;
+      }
+      .card-stage {
+        display: block;
+        position: relative;
+        height: 56vh;
+        border-radius: 24px 24px 0 0;
+        overflow: hidden;
+        box-shadow: 0 -10px 48px rgba(0, 0, 0, 0.4);
+        transform: translateY(30px);
+        transition: transform var(--t-slow) var(--ease-out);
+      }
+      #screen-cards.is-active .card-stage {
+        transform: translateY(0);
+      }
       .card {
         position: absolute;
         inset: 0;
-        border-radius: 16px;
         overflow: hidden;
         background: var(--bg-color);
-        box-shadow:
-          0 30px 70px rgba(0, 0, 0, 0.45),
-          0 0 0 1px rgba(0, 0, 0, 0.06);
         opacity: 0;
-        transform: translateX(40px) scale(0.97);
+        transform: translateX(44px) scale(0.97);
         transition: opacity var(--t-med) var(--ease-out),
                     transform var(--t-med) var(--ease-out);
         display: flex;
         flex-direction: column;
-        padding: 1.8rem 1.6rem;
+        padding: 1.6rem 1.6rem 1.4rem;
       }
       .card.is-current { opacity: 1; transform: translateX(0) scale(1); }
-      .card.is-past    { opacity: 0; transform: translateX(-40px) scale(0.97); }
+      .card.is-past    { opacity: 0; transform: translateX(-44px) scale(0.97); }
       .card[data-color="orange"] { --bg-color: var(--orange); }
       .card[data-color="olive"]  { --bg-color: var(--olive);  }
       .card[data-color="amber"]  { --bg-color: var(--amber);  }
@@ -455,17 +502,18 @@
       }
 
       .card-progress {
-        position: absolute;
-        bottom: calc(env(safe-area-inset-bottom, 0) + 2rem);
-        left: 50%;
-        transform: translateX(-50%);
         display: flex;
+        justify-content: center;
         gap: 0.55rem;
+        padding: 0.75rem 0 calc(env(safe-area-inset-bottom, 0) + 0.6rem);
+        background: rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
       }
       .card-progress .dot {
         width: 6px; height: 6px;
         border-radius: 50%;
-        background: rgba(253, 246, 227, 0.3);
+        background: rgba(253, 246, 227, 0.35);
         transition: background var(--t-fast), width var(--t-fast);
       }
       .card-progress .dot.is-on {
@@ -473,14 +521,13 @@
         width: 20px; border-radius: 3px;
       }
       .card-tap-hint {
-        position: absolute;
-        top: calc(env(safe-area-inset-top, 0) + 1.4rem);
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.66rem;
-        letter-spacing: 0.32em;
+        text-align: center;
+        font-size: 0.62rem;
+        letter-spacing: 0.3em;
         text-transform: uppercase;
-        color: rgba(253, 246, 227, 0.55);
+        color: rgba(253, 246, 227, 0.6);
+        padding: 0.6rem 0 0.5rem;
+        background: transparent;
       }
 
       /* ----------  STATE 6 · COMMUNITY POPUP  ---------- */
@@ -660,60 +707,6 @@
 
       <a-entity id="target" mindar-image-target="targetIndex: 0">
 
-        <!-- Cylinder represents the can body; helps anchor card visually -->
-        <a-cylinder id="can-cylinder"
-          radius="0.065" height="0.22"
-          position="0 -0.02 0"
-          color="#d4a054" opacity="0.07"
-          material="shader: flat; side: double; transparent: true"
-          visible="false">
-        </a-cylinder>
-
-        <!-- AR info cards — float above the can; shown in cards state -->
-        <a-entity id="ar-card-container" billboard position="0 0.38 0.02" visible="false">
-
-          <!-- card 0 · ALBA · orange -->
-          <a-entity id="ar-card-0" visible="true">
-            <a-plane width="0.2" height="0.29" color="#E48043" material="shader: flat; opacity: 0.96"></a-plane>
-            <a-image  src="#img-can"   width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
-            <a-text value="01"           color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
-            <a-text value="ALBA"         color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
-            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
-            <a-text value="Soft wheat, bright citrus,&#xa;mid-morning sun." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
-          </a-entity>
-
-          <!-- card 1 · NARANJA · olive -->
-          <a-entity id="ar-card-1" visible="false">
-            <a-plane width="0.2" height="0.29" color="#9C963A" material="shader: flat; opacity: 0.96"></a-plane>
-            <a-image  src="#img-wheat" width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
-            <a-text value="02"              color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
-            <a-text value="NARANJA"         color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
-            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
-            <a-text value="Valencia oranges, picked&#xa;at the end of winter." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
-          </a-entity>
-
-          <!-- card 2 · ZARRA · amber -->
-          <a-entity id="ar-card-2" visible="false">
-            <a-plane width="0.2" height="0.29" color="#D9A032" material="shader: flat; opacity: 0.96"></a-plane>
-            <a-image  src="#img-mtns"  width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
-            <a-text value="03"         color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
-            <a-text value="ZARRA"      color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
-            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
-            <a-text value="A village of 400,&#xa;a brewery, and a river." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
-          </a-entity>
-
-          <!-- card 3 · AITOR · sage -->
-          <a-entity id="ar-card-3" visible="false">
-            <a-plane width="0.2" height="0.29" color="#8FA38C" material="shader: flat; opacity: 0.96"></a-plane>
-            <a-image  src="#img-brewery" width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
-            <a-text value="04"           color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
-            <a-text value="AITOR"        color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
-            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
-            <a-text value="Third generation.&#xa;Vive grande, vive libre." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
-          </a-entity>
-
-        </a-entity>
-
         <a-entity id="valley-scene" billboard position="0 0 0">
           <!-- Parallax: outer entity drifts on Y, inner drifts on X -->
           <a-entity
@@ -846,6 +839,9 @@
       <source src="./assets/valley-audio.mp3" type="audio/mpeg">
     </audio>
 
+    <!-- AR anchor dot — follows the projected can position when cards are shown -->
+    <div id="ar-anchor" aria-hidden="true"></div>
+
     <button class="restart-btn" id="restart-btn" title="Restart">↺</button>
 
     <script>
@@ -977,20 +973,34 @@
         valleyScreen.classList.add('show-hint');
       }
 
-      const arCardContainer = document.getElementById('ar-card-container');
-      const arCanCylinder   = document.getElementById('can-cylinder');
+      /* ============================================================
+         AR ANCHOR DOT  ·  projects the target's 3D world position onto
+         the screen so a dot "pins" the can while the card panel is shown.
+         ============================================================ */
+      const anchorDot = document.getElementById('ar-anchor');
+      let anchorCanVisible = false;
 
-      function setArCards(visible) {
-        const v = visible ? 'true' : 'false';
-        if (arCardContainer) arCardContainer.setAttribute('visible', v);
-        if (arCanCylinder)   arCanCylinder.setAttribute('visible', v);
-      }
+      (function anchorLoop() {
+        if (state === 'cards' && anchorCanVisible) {
+          const cam = document.querySelector('a-camera');
+          if (cam && cam.components && cam.components.camera && target.object3D) {
+            const wp = new THREE.Vector3();
+            target.object3D.getWorldPosition(wp);
+            wp.project(cam.components.camera.camera);
+            const sx = (wp.x *  0.5 + 0.5) * window.innerWidth;
+            const sy = (wp.y * -0.5 + 0.5) * window.innerHeight;
+            anchorDot.style.left    = sx + 'px';
+            anchorDot.style.top     = sy + 'px';
+            anchorDot.style.display = 'block';
+          }
+        } else {
+          anchorDot.style.display = 'none';
+        }
+        requestAnimationFrame(anchorLoop);
+      })();
 
       function goTo(next) {
         if (next === state) return;
-
-        if (next === 'cards')                        setArCards(true);
-        if (state === 'cards' && next !== 'cards')   setArCards(false);
 
         // Enter valley → start video + audio simultaneously
         if (next === 'valley') {
@@ -1068,10 +1078,10 @@
         document.querySelectorAll('.card-progress .dot').forEach((d, i) => {
           d.classList.toggle('is-on', i === cardIndex);
         });
-        // AR cards — show only the active one
-        CONTENT.cards.items.forEach((_, i) => {
-          const el = document.getElementById('ar-card-' + i);
-          if (el) el.setAttribute('visible', i === cardIndex ? 'true' : 'false');
+        // HTML cards — toggle is-current / is-past classes
+        document.querySelectorAll('#card-stage .card').forEach((el, i) => {
+          el.classList.toggle('is-current', i === cardIndex);
+          el.classList.toggle('is-past',    i < cardIndex);
         });
       }
 
@@ -1094,9 +1104,11 @@
       });
 
       target.addEventListener('targetFound', () => {
+        anchorCanVisible = true;
         if (state === 'scan') goTo('detected');
       });
       target.addEventListener('targetLost', () => {
+        anchorCanVisible = false;
         if (state === 'detected') goTo('scan');
       });
 
