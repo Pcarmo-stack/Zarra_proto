@@ -306,13 +306,17 @@
         opacity: 1;
         transform: scale(1);
       }
+      /* Smooth end state — slow zoom + fade instead of jerky frame-seeking reverse */
+      #valley-video.is-ending {
+        opacity: 0.55;
+        transform: scale(1.1);
+        transition: opacity 5s ease, transform 6s ease;
+      }
 
       /* ----------  STATE 4 · VALLEY  ---------- */
       #screen-valley {
         background: transparent;
         z-index: 6;
-        align-items: end;
-        padding-bottom: calc(env(safe-area-inset-bottom, 0) + 2rem);
         pointer-events: none;
       }
 
@@ -359,14 +363,19 @@
       }
       .valley-ctrl-btn:active { transform: scale(0.95); background: rgba(0,0,0,0.55); }
 
-      /* "Tap to continue / skip" pill — bottom-centre */
+      /* "Tap to continue" pill — anchored bottom-centre, never moves */
       .valley-hint {
+        position: absolute;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 2.2rem);
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
         font-size: 0.72rem;
         letter-spacing: 0.32em;
         text-transform: uppercase;
         color: #fdf6e3;
         text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-        padding: 0.7rem 1.2rem;
+        padding: 0.7rem 1.4rem;
         border: 1px solid rgba(253, 246, 227, 0.35);
         border-radius: 999px;
         background: rgba(0, 0, 0, 0.35);
@@ -377,14 +386,15 @@
       }
       #screen-valley.show-hint .valley-hint {
         pointer-events: auto;
-        animation: hint-breathe 2.6s ease-in-out 0.3s infinite;
-        animation-fill-mode: forwards;
+        animation: hint-in 0.4s ease forwards, hint-pulse 2.4s ease-in-out 0.4s infinite;
       }
-      @keyframes hint-breathe {
-        0%       { opacity: 0; transform: translateY(10px) scale(0.8); }
-        20%, 80% { opacity: 1; transform: translateY(0); }
-        50%      { opacity: 0.7; }
-        100%     { opacity: 1; transform: translateY(0); }
+      @keyframes hint-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes hint-pulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: 0.6; }
       }
 
       /* ----------  STATE 5 · CARDS  ---------- */
@@ -460,12 +470,13 @@
         pointer-events: none;
       }
       .card-art img {
-        width: 65%;
-        height: 65%;
+        width: 70%;
+        height: 70%;
         object-fit: contain;
-        opacity: 0.28;
-        mix-blend-mode: luminosity;
-        transform: translateY(-8%);
+        opacity: 0.58;
+        mix-blend-mode: screen;
+        transform: translateY(-6%);
+        filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35));
       }
 
       /* Gradient: transparent top → solid card colour at bottom for text legibility */
@@ -960,6 +971,82 @@
       });
 
       /* ============================================================
+         SOUND ENGINE  ·  Web Audio API — no extra files needed
+         ============================================================ */
+      const SFX = (() => {
+        let ctx = null;
+
+        function init() {
+          if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+          if (ctx.state === 'suspended') ctx.resume();
+        }
+
+        function tone(freq, type, gainVal, duration, freqEnd) {
+          const now = ctx.currentTime;
+          const osc  = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+          gain.gain.setValueAtTime(gainVal, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+          osc.start(now); osc.stop(now + duration);
+        }
+
+        const sounds = {
+          // Soft button tap
+          tap() {
+            tone(900, 'sine', 0.14, 0.10, 500);
+          },
+          // Card swipe — quick filtered noise burst
+          swipe() {
+            const now = ctx.currentTime;
+            const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+            const src    = ctx.createBufferSource();
+            const filter = ctx.createBiquadFilter();
+            const gain   = ctx.createGain();
+            src.buffer = buf;
+            filter.type = 'bandpass'; filter.frequency.value = 1800; filter.Q.value = 0.8;
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+            src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+            src.start(now);
+          },
+          // Gentle ascending chord when cards appear
+          reveal() {
+            [440, 554, 659].forEach((f, i) => {
+              const now  = ctx.currentTime + i * 0.07;
+              const osc  = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.type = 'sine'; osc.frequency.value = f;
+              gain.gain.setValueAtTime(0, now);
+              gain.gain.linearRampToValueAtTime(0.07, now + 0.06);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+              osc.start(now); osc.stop(now + 0.55);
+            });
+          },
+          // Soft ding for "tap to continue" hint
+          hint() {
+            tone(660, 'sine', 0.13, 0.55, 540);
+          },
+          // Warm low whoosh for screen transitions
+          transition() {
+            tone(180, 'sine', 0.09, 0.30, 520);
+          },
+        };
+
+        return {
+          play(name) {
+            try { init(); sounds[name] && sounds[name](); } catch (_) {}
+          },
+        };
+      })();
+
+      /* ============================================================
          STATE MACHINE
          ============================================================ */
       const STATES = ['intro', 'scan', 'detected', 'valley', 'cards', 'community'];
@@ -976,17 +1063,15 @@
       const valleyHint   = valleyScreen.querySelector('.valley-hint');
       let skipTimer      = null;
       let hintVisible    = false;
-      let reverseRAF     = null;
 
       function valleyCleanup() {
         clearTimeout(skipTimer);
-        if (reverseRAF) { cancelAnimationFrame(reverseRAF); reverseRAF = null; }
-        skipTimer  = null;
+        skipTimer   = null;
         hintVisible = false;
         valleyScreen.classList.remove('show-hint');
         valleyAudio.pause();
         valleyAudio.currentTime = 0;
-        valleyVideo.classList.remove('is-revealed');
+        valleyVideo.classList.remove('is-revealed', 'is-ending');
         setTimeout(() => {
           valleyVideo.pause();
           valleyVideo.style.display = 'none';
@@ -1043,33 +1128,22 @@
         state = next;
       }
 
-      // Video ends → play in slow reverse, then after 5 s show "Tap to continue"
+      // Video ends → smooth CSS zoom-out, hint appears immediately
       valleyVideo.addEventListener('ended', () => {
-        let lastTs = null;
-        const REVERSE_SPEED = 0.12; // 12 % of normal speed
-
-        function reverseStep(ts) {
-          if (!lastTs) lastTs = ts;
-          const dt = (ts - lastTs) / 1000;
-          lastTs = ts;
-          if (valleyVideo.currentTime > 0 && state === 'valley') {
-            valleyVideo.currentTime = Math.max(0, valleyVideo.currentTime - dt * REVERSE_SPEED);
-            reverseRAF = requestAnimationFrame(reverseStep);
-          } else {
-            reverseRAF = null;
-          }
+        valleyVideo.classList.add('is-ending');
+        if (state === 'valley' && !hintVisible) {
+          showValleyHint('Tap to continue');
+          SFX.play('hint');
         }
-        reverseRAF = requestAnimationFrame(reverseStep);
-
-        skipTimer = setTimeout(() => {
-          if (state === 'valley' && !hintVisible) showValleyHint('Tap to continue');
-        }, 5000);
       });
 
-      // Audio ends → show / upgrade to "Tap to continue"
+      // Audio ends → show hint if not already visible
       valleyAudio.addEventListener('ended', () => {
         clearTimeout(skipTimer);
-        showValleyHint('Tap to continue');
+        if (state === 'valley' && !hintVisible) {
+          showValleyHint('Tap to continue');
+          SFX.play('hint');
+        }
       });
 
       // Mute toggle
@@ -1084,21 +1158,19 @@
       // Skip — immediately advances to cards, stops video + audio via goTo cleanup
       document.getElementById('valley-skip-btn').addEventListener('click', (e) => {
         e.stopPropagation();
+        SFX.play('tap');
         goTo('cards');
         showCard(0);
       });
 
       function showCard(idx) {
         cardIndex = Math.max(0, Math.min(idx, CONTENT.cards.items.length - 1));
-        // Progress dots
         document.querySelectorAll('.card-progress .dot').forEach((d, i) => {
           d.classList.toggle('is-on', i === cardIndex);
         });
-        // Dim / highlight cards
         document.querySelectorAll('#card-stage .card').forEach((el, i) => {
           el.classList.toggle('is-current', i === cardIndex);
         });
-        // Slide the track to centre the active card
         updateTrack();
       }
 
@@ -1106,6 +1178,7 @@
          WIRING
          ============================================================ */
       document.getElementById('start-btn').addEventListener('click', async () => {
+        SFX.play('tap');
         goTo('scan');
         const startMindAR = async () => {
           try {
@@ -1121,7 +1194,7 @@
       });
 
       target.addEventListener('targetFound', () => {
-        if (state === 'scan') goTo('detected');
+        if (state === 'scan') { SFX.play('transition'); goTo('detected'); }
       });
       target.addEventListener('targetLost', () => {
         if (state === 'detected') goTo('scan');
@@ -1131,12 +1204,17 @@
         if (state === 'cards') updateTrack();
       });
 
-      document.getElementById('detected-cta').addEventListener('click', () => goTo('valley'));
+      document.getElementById('detected-cta').addEventListener('click', () => {
+        SFX.play('tap');
+        goTo('valley');
+      });
 
       document.getElementById('screen-valley').addEventListener('click', () => {
         if (hintVisible) {
+          SFX.play('transition');
           goTo('cards');
           showCard(0);
+          SFX.play('reveal');
         }
       });
 
@@ -1156,12 +1234,11 @@
           const dy = e.changedTouches[0].clientY - startY;
           if (Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy)) {
             didSwipe = true;
+            SFX.play('swipe');
             if (dx < 0) {
-              // swipe left → next
               if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
-              else goTo('community');
+              else { SFX.play('transition'); goTo('community'); }
             } else {
-              // swipe right → previous
               if (cardIndex > 0) showCard(cardIndex - 1);
             }
           }
@@ -1170,18 +1247,26 @@
         el.addEventListener('click', (e) => {
           if (e.target.closest('.restart-btn')) return;
           if (didSwipe) { didSwipe = false; return; }
+          SFX.play('swipe');
           if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
-          else goTo('community');
+          else { SFX.play('transition'); goTo('community'); }
         });
       })();
 
       document.getElementById('community-join').addEventListener('click', () => {
+        SFX.play('tap');
         if (CONTENT.community.joinUrl) {
           window.open(CONTENT.community.joinUrl, '_blank', 'noopener');
         }
       });
-      document.getElementById('community-skip').addEventListener('click', restart);
-      document.getElementById('restart-btn').addEventListener('click', restart);
+      document.getElementById('community-skip').addEventListener('click', () => { SFX.play('tap'); restart(); });
+      document.getElementById('restart-btn').addEventListener('click', () => { SFX.play('tap'); restart(); });
+
+      // Mute button
+      document.getElementById('valley-mute-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        SFX.play('tap');
+      });
 
       function restart() {
         cardIndex = 0;
