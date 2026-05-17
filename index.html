@@ -383,40 +383,8 @@
         100%     { opacity: 1; transform: translateY(0); }
       }
 
-      /* ----------  AR ANCHOR DOT  ---------- */
-      #ar-anchor {
-        position: fixed;
-        width: 54px; height: 54px;
-        border-radius: 50%;
-        border: 2px solid rgba(228, 128, 67, 0.9);
-        background: rgba(228, 128, 67, 0.14);
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 6;
-        display: none;
-      }
-      #ar-anchor::before {
-        content: '';
-        position: absolute;
-        inset: 6px;
-        border-radius: 50%;
-        background: rgba(228, 128, 67, 0.35);
-      }
-      #ar-anchor::after {
-        content: '';
-        position: absolute;
-        inset: -12px;
-        border-radius: 50%;
-        border: 1.5px solid rgba(228, 128, 67, 0.45);
-        animation: anchor-ring 1.9s ease-out infinite;
-      }
-      @keyframes anchor-ring {
-        0%   { transform: scale(1);   opacity: 0.7; }
-        100% { transform: scale(2.1); opacity: 0; }
-      }
-
       /* ----------  STATE 5 · CARDS  ---------- */
-      /* Transparent bg — camera feed shows through; card panel slides up from bottom */
+      /* Camera stays fully visible. Panel occupies bottom ~36% and slides up. */
       #screen-cards {
         background: transparent;
         display: flex;
@@ -425,109 +393,131 @@
         align-items: stretch;
         padding: 0;
       }
-      .card-stage {
-        display: block;
-        position: relative;
-        height: 56vh;
-        border-radius: 24px 24px 0 0;
-        overflow: hidden;
-        box-shadow: 0 -10px 48px rgba(0, 0, 0, 0.4);
-        transform: translateY(30px);
-        transition: transform var(--t-slow) var(--ease-out);
+
+      /* The whole panel enters from below */
+      .cards-panel {
+        transform: translateY(110%);
+        transition: transform 0.52s var(--ease-out);
       }
-      #screen-cards.is-active .card-stage {
+      #screen-cards.is-active .cards-panel {
         transform: translateY(0);
       }
+
+      /* Carousel viewport — clips top/bottom, lets sides bleed for peek effect */
+      .card-viewport {
+        height: 34vh;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Horizontal track — width is set by JS; slides via transform */
+      .card-track {
+        display: flex;
+        align-items: stretch;
+        height: 100%;
+        will-change: transform;
+        transition: transform 0.42s var(--ease-out);
+      }
+
+      /* Individual card */
       .card {
-        position: absolute;
-        inset: 0;
+        flex: 0 0 var(--card-w, 76vw);
+        height: 100%;
+        border-radius: 18px 18px 0 0;
         overflow: hidden;
         background: var(--bg-color);
-        opacity: 0;
-        transform: translateX(44px) scale(0.97);
-        transition: opacity var(--t-med) var(--ease-out),
-                    transform var(--t-med) var(--ease-out);
         display: flex;
         flex-direction: column;
-        padding: 1.6rem 1.6rem 1.4rem;
+        padding: 1.1rem 1.3rem 0.9rem;
+        margin: 0 5px;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
+        opacity: 0.55;
+        transform: scale(0.94);
+        transition: opacity 0.38s var(--ease-out),
+                    transform 0.38s var(--ease-out);
       }
-      .card.is-current { opacity: 1; transform: translateX(0) scale(1); }
-      .card.is-past    { opacity: 0; transform: translateX(-44px) scale(0.97); }
+      .card.is-current {
+        opacity: 1;
+        transform: scale(1);
+      }
       .card[data-color="orange"] { --bg-color: var(--orange); }
       .card[data-color="olive"]  { --bg-color: var(--olive);  }
       .card[data-color="amber"]  { --bg-color: var(--amber);  }
       .card[data-color="sage"]   { --bg-color: var(--sage);   }
 
       .card-art {
-        flex: 0 0 158px;   /* fixed height — all cards identical */
+        flex: 0 0 44%;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 1rem 0.75rem 0.5rem;
+        padding: 0.4rem 0.4rem 0.3rem;
       }
       .card-art img {
         height: 100%;
         width: auto;
-        max-width: 85%;
+        max-width: 80%;
         object-fit: contain;
-        filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.18));
+        filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.2));
       }
       .card-meta {
         display: flex;
         align-items: baseline;
-        gap: 0.6em;
-        font-size: 0.66rem;
+        gap: 0.5em;
+        font-size: 0.6rem;
         font-weight: 600;
-        letter-spacing: 0.28em;
+        letter-spacing: 0.26em;
         text-transform: uppercase;
         color: rgba(42, 26, 14, 0.5);
-        margin-bottom: 0.45rem;
+        margin-bottom: 0.3rem;
       }
       .card-meta .slash { font-weight: 300; }
       .card-meta .num   { color: rgba(42, 26, 14, 0.7); }
       .card-title {
         font-family: var(--font-display);
-        font-size: 2.4rem;
+        font-size: 1.9rem;
         letter-spacing: 0.06em;
         line-height: 1;
         color: var(--ink);
-        margin: 0 0 0.6rem;
+        margin: 0 0 0.4rem;
       }
       .card-desc {
         font-weight: 400;
-        font-size: 0.82rem;
-        line-height: 1.45;
+        font-size: 0.75rem;
+        line-height: 1.42;
         color: rgba(42, 26, 14, 0.78);
         margin: 0;
       }
 
+      /* Progress + swipe hint strip below the cards */
+      .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 0.6rem 1.4rem calc(env(safe-area-inset-bottom, 0) + 0.55rem);
+        background: rgba(14, 9, 3, 0.55);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
       .card-progress {
         display: flex;
-        justify-content: center;
-        gap: 0.55rem;
-        padding: 0.75rem 0 calc(env(safe-area-inset-bottom, 0) + 0.6rem);
-        background: rgba(0, 0, 0, 0.28);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        gap: 0.5rem;
       }
       .card-progress .dot {
         width: 6px; height: 6px;
         border-radius: 50%;
-        background: rgba(253, 246, 227, 0.35);
+        background: rgba(253, 246, 227, 0.3);
         transition: background var(--t-fast), width var(--t-fast);
       }
       .card-progress .dot.is-on {
         background: #fdf6e3;
-        width: 20px; border-radius: 3px;
+        width: 18px; border-radius: 3px;
       }
-      .card-tap-hint {
-        text-align: center;
-        font-size: 0.62rem;
-        letter-spacing: 0.3em;
+      .card-swipe-hint {
+        font-size: 0.58rem;
+        letter-spacing: 0.22em;
         text-transform: uppercase;
-        color: rgba(253, 246, 227, 0.6);
-        padding: 0.6rem 0 0.5rem;
-        background: transparent;
+        color: rgba(253, 246, 227, 0.4);
       }
 
       /* ----------  STATE 6 · COMMUNITY POPUP  ---------- */
@@ -810,9 +800,15 @@
          STATE 5 · CARDS
          ============================================================ -->
     <section id="screen-cards" class="screen">
-      <div class="card-tap-hint" data-copy="cards.tap">Tap to continue</div>
-      <div class="card-stage" id="card-stage"></div>
-      <div class="card-progress" id="card-progress"></div>
+      <div class="cards-panel">
+        <div class="card-viewport">
+          <div class="card-track" id="card-stage"></div>
+        </div>
+        <div class="card-footer">
+          <div class="card-progress" id="card-progress"></div>
+          <span class="card-swipe-hint">Swipe</span>
+        </div>
+      </div>
     </section>
 
     <!-- ============================================================
@@ -838,9 +834,6 @@
     <audio id="valley-audio" preload="auto">
       <source src="./assets/valley-audio.mp3" type="audio/mpeg">
     </audio>
-
-    <!-- AR anchor dot — follows the projected can position when cards are shown -->
-    <div id="ar-anchor" aria-hidden="true"></div>
 
     <button class="restart-btn" id="restart-btn" title="Restart">↺</button>
 
@@ -974,30 +967,19 @@
       }
 
       /* ============================================================
-         AR ANCHOR DOT  ·  projects the target's 3D world position onto
-         the screen so a dot "pins" the can while the card panel is shown.
+         CARD CAROUSEL  ·  track slides horizontally; peeking cards
+         visible on both sides.
          ============================================================ */
-      const anchorDot = document.getElementById('ar-anchor');
-      let anchorCanVisible = false;
+      const cardTrack = document.getElementById('card-stage');
+      const CARD_W_RATIO = 0.76; // 76 vw per card
+      const CARD_GAP     = 10;   // px between cards
 
-      (function anchorLoop() {
-        if (state === 'cards' && anchorCanVisible) {
-          const cam = document.querySelector('a-camera');
-          if (cam && cam.components && cam.components.camera && target.object3D) {
-            const wp = new THREE.Vector3();
-            target.object3D.getWorldPosition(wp);
-            wp.project(cam.components.camera.camera);
-            const sx = (wp.x *  0.5 + 0.5) * window.innerWidth;
-            const sy = (wp.y * -0.5 + 0.5) * window.innerHeight;
-            anchorDot.style.left    = sx + 'px';
-            anchorDot.style.top     = sy + 'px';
-            anchorDot.style.display = 'block';
-          }
-        } else {
-          anchorDot.style.display = 'none';
-        }
-        requestAnimationFrame(anchorLoop);
-      })();
+      function updateTrack() {
+        const vw     = window.innerWidth;
+        const cardW  = vw * CARD_W_RATIO;
+        const offset = (vw - cardW) / 2 - cardIndex * (cardW + CARD_GAP);
+        cardTrack.style.transform = `translateX(${offset}px)`;
+      }
 
       function goTo(next) {
         if (next === state) return;
@@ -1078,11 +1060,12 @@
         document.querySelectorAll('.card-progress .dot').forEach((d, i) => {
           d.classList.toggle('is-on', i === cardIndex);
         });
-        // HTML cards — toggle is-current / is-past classes
+        // Dim / highlight cards
         document.querySelectorAll('#card-stage .card').forEach((el, i) => {
           el.classList.toggle('is-current', i === cardIndex);
-          el.classList.toggle('is-past',    i < cardIndex);
         });
+        // Slide the track to centre the active card
+        updateTrack();
       }
 
       /* ============================================================
@@ -1104,12 +1087,14 @@
       });
 
       target.addEventListener('targetFound', () => {
-        anchorCanVisible = true;
         if (state === 'scan') goTo('detected');
       });
       target.addEventListener('targetLost', () => {
-        anchorCanVisible = false;
         if (state === 'detected') goTo('scan');
+      });
+
+      window.addEventListener('resize', () => {
+        if (state === 'cards') updateTrack();
       });
 
       document.getElementById('detected-cta').addEventListener('click', () => goTo('valley'));
