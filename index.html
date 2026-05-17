@@ -588,14 +588,14 @@
         background: #0a0703;
         overflow: hidden;
       }
-      /* Parallax background image — moved by deviceorientation JS */
       .community-bg {
         position: absolute;
-        top: -12%; left: -12%;
-        width: 124%; height: 124%;
+        inset: 0;
+        width: 100%;
+        height: 100%;
         object-fit: cover;
+        object-position: center center;
         filter: brightness(0.42);
-        will-change: transform;
         z-index: 0;
         pointer-events: none;
       }
@@ -1076,80 +1076,61 @@
 
         const sounds = {
           /* ── TAP ─────────────────────────────────────────────────
-             Glass-chime click: fundamental + octave + fifth.
-             Feels like a high-quality UI crystal tap.          */
+             Single clean mid-tone. Short, physical, unobtrusive. */
           tap() {
-            bell(880,  0.22, 0.30);        // fundamental  A5
-            bell(1760, 0.07, 0.18);        // octave       A6
-            bell(1320, 0.04, 0.14);        // fifth        E6
+            bell(330, 0.16, 0.13);  // E4
           },
 
           /* ── SWIPE ───────────────────────────────────────────────
-             Silk ribbon whoosh: shaped white noise through a
-             narrow high-pass, with a crystal tail at the end.  */
+             Soft mid-band noise brush — no high-frequency tail.  */
           swipe() {
             const now = ctx.currentTime;
             const sr  = ctx.sampleRate;
-            const dur = 0.10;
+            const dur = 0.09;
             const buf = ctx.createBuffer(1, sr * dur, sr);
             const d   = buf.getChannelData(0);
             for (let i = 0; i < d.length; i++) {
-              const env = i < d.length * 0.08 ? i / (d.length * 0.08)
-                        : i > d.length * 0.65 ? 1 - (i / d.length - 0.65) / 0.35
-                        : 1;
-              d[i] = (Math.random() * 2 - 1) * env;
+              const t = i / d.length;
+              d[i] = (Math.random() * 2 - 1) * (t < 0.1 ? t / 0.1 : 1 - t);
             }
             const src = ctx.createBufferSource(); src.buffer = buf;
-            const hp  = ctx.createBiquadFilter();
-            hp.type = 'highpass'; hp.frequency.value = 3800; hp.Q.value = 0.6;
-            const lp  = ctx.createBiquadFilter();
-            lp.type = 'lowpass';  lp.frequency.value = 10000;
+            const bp  = ctx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.0;
             const g   = ctx.createGain();
-            g.gain.setValueAtTime(0.20, now);
+            g.gain.setValueAtTime(0.13, now);
             g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-            src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(out);
+            src.connect(bp); bp.connect(g); g.connect(out);
             src.start(now);
-            // Crystal chime tail
-            bell(2093, 0.055, 0.26, 0.07); // C7
           },
 
           /* ── REVEAL ──────────────────────────────────────────────
-             Music-box arpeggio: four soft bell notes ascending in
-             a C-major chord. Each note has a shimmer harmonic.  */
+             C-major triad one octave lower — warm, open, clean.  */
           reveal() {
-            [[523.25, 0], [659.25, 0.09], [783.99, 0.18], [1046.5, 0.27]]
-              .forEach(([f, offset]) => {
-                bell(f,     0.13, 0.75, offset);       // fundamental
-                bell(f * 2, 0.04, 0.38, offset + 0.01); // shimmer
-              });
+            [[261.63, 0], [329.63, 0.09], [392.00, 0.18]]  // C4 E4 G4
+              .forEach(([f, offset]) => bell(f, 0.12, 0.45, offset));
           },
 
           /* ── HINT ────────────────────────────────────────────────
-             Singing-bowl tone: warm A4 + E5 perfect fifth.
-             Long, calm, meditative — invites the user forward.  */
+             C4 + G4 perfect fifth — warm, calm, inviting.        */
           hint() {
-            bell(440,  0.17, 1.10);  // A4 — warm root
-            bell(659,  0.10, 0.85);  // E5 — perfect fifth
-            bell(880,  0.04, 0.50);  // A5 — octave shimmer
+            bell(261.63, 0.13, 0.70);  // C4
+            bell(392.00, 0.07, 0.55);  // G4
           },
 
           /* ── TRANSITION ──────────────────────────────────────────
-             Upward pitch glide that lands on a soft bell note.
-             Feels like something snapping pleasantly into place. */
+             Low-to-mid sine glide — brief, neutral, modern.      */
           transition() {
             const now = ctx.currentTime;
             const osc = ctx.createOscillator();
             const g   = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(300,  now);
-            osc.frequency.exponentialRampToValueAtTime(1046, now + 0.10);
-            osc.frequency.exponentialRampToValueAtTime(880,  now + 0.20);
+            osc.frequency.setValueAtTime(160, now);
+            osc.frequency.exponentialRampToValueAtTime(440, now + 0.12);
             g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.20, now + 0.04);
-            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+            g.gain.linearRampToValueAtTime(0.14, now + 0.03);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
             osc.connect(g); g.connect(out);
-            osc.start(now); osc.stop(now + 0.58);
-            bell(880, 0.09, 0.32, 0.18); // landing chime
+            osc.start(now); osc.stop(now + 0.35);
           },
         };
 
