@@ -384,12 +384,9 @@
       }
 
       /* ----------  STATE 5 · CARDS  ---------- */
-      #screen-cards { background: rgba(10, 7, 3, 0.35); }
-      .card-stage {
-        position: relative;
-        width: min(82vw, 340px);
-        aspect-ratio: 0.72;
-      }
+      /* Transparent — AR cards live in the scene; this layer only carries dots + hint */
+      #screen-cards { background: transparent; }
+      .card-stage   { display: none; }
       .card {
         position: absolute;
         inset: 0;
@@ -415,19 +412,16 @@
       .card[data-color="sage"]   { --bg-color: var(--sage);   }
 
       .card-art {
-        flex: 1;
-        display: grid;
-        place-items: center;
-        padding: 0.5rem;
-        padding-bottom: 1.8rem;
-        min-height: 0;
-        align-items: flex-start;
+        flex: 0 0 158px;   /* fixed height — all cards identical */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 0.75rem 0.5rem;
       }
       .card-art img {
-        max-height: 100%;
-        max-width: 100%;
+        height: 100%;
         width: auto;
-        height: auto;
+        max-width: 85%;
         object-fit: contain;
         filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.18));
       }
@@ -593,6 +587,29 @@
       }
       .popup-dismiss:active { color: var(--ink); }
 
+      /* ----------  COMMUNITY · staggered entrance animations  ---------- */
+      @keyframes badge-pop {
+        0%   { transform: translateX(-50%) scale(0) rotate(-25deg); opacity: 0; }
+        70%  { transform: translateX(-50%) scale(1.15) rotate(4deg); opacity: 1; }
+        100% { transform: translateX(-50%) scale(1) rotate(0deg);   opacity: 1; }
+      }
+      @keyframes grow-x {
+        from { transform: scaleX(0); opacity: 0; }
+        to   { transform: scaleX(1); opacity: 0.35; }
+      }
+      @keyframes pop-up {
+        from { opacity: 0; transform: translateY(14px) scale(0.96); }
+        to   { opacity: 1; transform: translateY(0)    scale(1); }
+      }
+
+      #screen-community.is-active .popup-mark    { animation: badge-pop 0.65s var(--ease-out) 0.25s both; }
+      #screen-community.is-active .popup-num     { animation: pop-up    0.50s var(--ease-out) 0.50s both; }
+      #screen-community.is-active .popup-divider { animation: grow-x    0.40s ease            0.72s both; }
+      #screen-community.is-active .popup-line    { animation: pop-up    0.45s var(--ease-out) 0.84s both; }
+      #screen-community.is-active .popup-title   { animation: pop-up    0.50s var(--ease-out) 0.96s both; }
+      #screen-community.is-active .popup-cta     { animation: pop-up    0.45s var(--ease-out) 1.10s both; }
+      #screen-community.is-active .popup-dismiss { animation: pop-up    0.40s var(--ease-out) 1.25s both; }
+
       /* Restart button shown on every screen except intro */
       .restart-btn {
         position: fixed;
@@ -629,11 +646,12 @@
       embedded
     >
       <a-assets timeout="30000">
-        <img id="img-landscape" src="./assets/landscape.jpg"    crossorigin="anonymous" />
-        <img id="img-wheat"     src="./assets/wheat-orange.png" crossorigin="anonymous" />
-        <img id="img-brewery"   src="./assets/brewery.png"      crossorigin="anonymous" />
-        <img id="img-sun"       src="./assets/sun-rays.png"     crossorigin="anonymous" />
+        <img id="img-landscape" src="./assets/landscape.jpg"     crossorigin="anonymous" />
+        <img id="img-wheat"     src="./assets/wheat-orange.png"  crossorigin="anonymous" />
+        <img id="img-brewery"   src="./assets/brewery.png"       crossorigin="anonymous" />
+        <img id="img-sun"       src="./assets/sun-rays.png"      crossorigin="anonymous" />
         <img id="img-mtns"      src="./assets/sun-mountains.png" crossorigin="anonymous" />
+        <img id="img-can"       src="./assets/can.png"           crossorigin="anonymous" />
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -641,6 +659,61 @@
       <a-entity light="type: directional; color: #fff2c8; intensity: 0.5" position="0.5 1 1"></a-entity>
 
       <a-entity id="target" mindar-image-target="targetIndex: 0">
+
+        <!-- Cylinder represents the can body; helps anchor card visually -->
+        <a-cylinder id="can-cylinder"
+          radius="0.065" height="0.22"
+          position="0 -0.02 0"
+          color="#d4a054" opacity="0.07"
+          material="shader: flat; side: double; transparent: true"
+          visible="false">
+        </a-cylinder>
+
+        <!-- AR info cards — float above the can; shown in cards state -->
+        <a-entity id="ar-card-container" billboard position="0 0.38 0.02" visible="false">
+
+          <!-- card 0 · ALBA · orange -->
+          <a-entity id="ar-card-0" visible="true">
+            <a-plane width="0.2" height="0.29" color="#E48043" material="shader: flat; opacity: 0.96"></a-plane>
+            <a-image  src="#img-can"   width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
+            <a-text value="01"           color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
+            <a-text value="ALBA"         color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
+            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
+            <a-text value="Soft wheat, bright citrus,&#xa;mid-morning sun." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
+          </a-entity>
+
+          <!-- card 1 · NARANJA · olive -->
+          <a-entity id="ar-card-1" visible="false">
+            <a-plane width="0.2" height="0.29" color="#9C963A" material="shader: flat; opacity: 0.96"></a-plane>
+            <a-image  src="#img-wheat" width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
+            <a-text value="02"              color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
+            <a-text value="NARANJA"         color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
+            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
+            <a-text value="Valencia oranges, picked&#xa;at the end of winter." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
+          </a-entity>
+
+          <!-- card 2 · ZARRA · amber -->
+          <a-entity id="ar-card-2" visible="false">
+            <a-plane width="0.2" height="0.29" color="#D9A032" material="shader: flat; opacity: 0.96"></a-plane>
+            <a-image  src="#img-mtns"  width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
+            <a-text value="03"         color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
+            <a-text value="ZARRA"      color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
+            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
+            <a-text value="A village of 400,&#xa;a brewery, and a river." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
+          </a-entity>
+
+          <!-- card 3 · AITOR · sage -->
+          <a-entity id="ar-card-3" visible="false">
+            <a-plane width="0.2" height="0.29" color="#8FA38C" material="shader: flat; opacity: 0.96"></a-plane>
+            <a-image  src="#img-brewery" width="0.12" height="0.12" position="0  0.055 0.003" material="transparent: true; alphaTest: 0.05; shader: flat"></a-image>
+            <a-text value="04"           color="#2A1A0E" align="center" position="0 -0.048 0.004" scale="0.042 0.042 0.042" width="4"></a-text>
+            <a-text value="AITOR"        color="#2A1A0E" align="center" position="0 -0.090 0.004" scale="0.082 0.082 0.082" width="2.2"></a-text>
+            <a-plane width="0.1" height="0.0015" color="#2A1A0E" opacity="0.18" position="0 -0.118 0.004" material="shader: flat"></a-plane>
+            <a-text value="Third generation.&#xa;Vive grande, vive libre." color="#3a200a" align="center" position="0 -0.162 0.004" scale="0.028 0.028 0.028" width="6.2"></a-text>
+          </a-entity>
+
+        </a-entity>
+
         <a-entity id="valley-scene" billboard position="0 0 0">
           <!-- Parallax: outer entity drifts on Y, inner drifts on X -->
           <a-entity
@@ -904,8 +977,20 @@
         valleyScreen.classList.add('show-hint');
       }
 
+      const arCardContainer = document.getElementById('ar-card-container');
+      const arCanCylinder   = document.getElementById('can-cylinder');
+
+      function setArCards(visible) {
+        const v = visible ? 'true' : 'false';
+        if (arCardContainer) arCardContainer.setAttribute('visible', v);
+        if (arCanCylinder)   arCanCylinder.setAttribute('visible', v);
+      }
+
       function goTo(next) {
         if (next === state) return;
+
+        if (next === 'cards')                        setArCards(true);
+        if (state === 'cards' && next !== 'cards')   setArCards(false);
 
         // Enter valley → start video + audio simultaneously
         if (next === 'valley') {
@@ -978,13 +1063,15 @@
       });
 
       function showCard(idx) {
-        cardIndex = idx;
-        document.querySelectorAll('.card').forEach((el, i) => {
-          el.classList.toggle('is-current', i === idx);
-          el.classList.toggle('is-past',    i <  idx);
-        });
+        cardIndex = Math.max(0, Math.min(idx, CONTENT.cards.items.length - 1));
+        // Progress dots
         document.querySelectorAll('.card-progress .dot').forEach((d, i) => {
-          d.classList.toggle('is-on', i === idx);
+          d.classList.toggle('is-on', i === cardIndex);
+        });
+        // AR cards — show only the active one
+        CONTENT.cards.items.forEach((_, i) => {
+          const el = document.getElementById('ar-card-' + i);
+          if (el) el.setAttribute('visible', i === cardIndex ? 'true' : 'false');
         });
       }
 
