@@ -492,87 +492,106 @@
       /* ----------  STATE 6 · COMMUNITY POPUP  ---------- */
       #screen-community {
         background:
-          linear-gradient(rgba(10, 7, 3, 0.5), rgba(10, 7, 3, 0.5)),
+          linear-gradient(rgba(10, 7, 3, 0.55), rgba(10, 7, 3, 0.55)),
           url('./assets/landscape.jpg') center/cover;
       }
       .popup {
         background: var(--cream);
-        border: 2px solid var(--teal);
-        border-radius: 16px;
-        padding: 2.4rem 1.8rem 1.6rem;
-        width: min(80vw, 300px);
+        border-radius: 22px;
+        /* warm hairline + deep shadow — no coloured border */
+        box-shadow:
+          0 0 0 1px rgba(42, 26, 14, 0.09),
+          0 24px 72px rgba(0, 0, 0, 0.48);
+        padding: 3.2rem 2rem 2rem;
+        width: min(84vw, 320px);
         text-align: center;
         position: relative;
-        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
-        transform: scale(0.92);
+        transform: translateY(20px) scale(0.94);
         opacity: 0;
         transition: transform var(--t-slow) var(--ease-out),
                     opacity var(--t-slow) var(--ease-out);
       }
-      .is-active .popup { transform: scale(1); opacity: 1; }
+      .is-active .popup { transform: translateY(0) scale(1); opacity: 1; }
+
+      /* Badge — solid orange circle, cream ring separates it from card */
       .popup-mark {
         position: absolute;
-        top: -20px;
+        top: -26px;
         left: 50%;
         transform: translateX(-50%);
-        width: 36px; height: 36px;
+        width: 52px; height: 52px;
         border-radius: 50%;
-        background: var(--cream);
-        border: 2px solid var(--teal);
+        background: var(--orange);
+        border: 4px solid var(--cream);
+        box-shadow: 0 6px 20px rgba(228, 128, 67, 0.38);
         display: grid;
         place-items: center;
-        font-family: var(--font-display);
-        font-size: 1.4rem;
-        color: var(--orange);
+        color: #fdf6e3;
+        font-size: 1.3rem;
+        line-height: 1;
+      }
+      .popup-divider {
+        width: 32px; height: 2px;
+        background: var(--orange);
+        opacity: 0.35;
+        border-radius: 2px;
+        margin: 0 auto 1.1rem;
       }
       .popup-num {
         font-family: var(--font-display);
-        font-size: 3.6rem;
+        font-size: 3.8rem;
         line-height: 1;
         letter-spacing: 0.04em;
         color: var(--orange);
-        margin: 0.4rem 0 0.7rem;
+        margin: 0 0 0.5rem;
       }
       .popup-line {
-        font-size: 0.7rem;
-        letter-spacing: 0.18em;
+        font-size: 0.68rem;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
-        color: rgba(42, 26, 14, 0.7);
-        line-height: 1.55;
-        margin: 0 0 1.5rem;
+        color: rgba(42, 26, 14, 0.6);
+        line-height: 1.6;
+        margin: 0 0 1.4rem;
       }
       .popup-title {
         font-family: var(--font-display);
-        font-size: 1.7rem;
-        letter-spacing: 0.06em;
+        font-size: 1.75rem;
+        letter-spacing: 0.05em;
         color: var(--ink);
-        margin: 0 0 1.4rem;
+        margin: 0 0 1.6rem;
+        line-height: 1.1;
       }
       .popup-cta {
         display: block;
         width: 100%;
         font-family: var(--font-display);
-        font-size: 1.05rem;
-        letter-spacing: 0.16em;
+        font-size: 1rem;
+        letter-spacing: 0.18em;
         color: #fdf6e3;
         background: var(--orange);
-        padding: 0.85rem 1rem;
+        padding: 0.9rem 1rem;
         border-radius: 999px;
-        margin-bottom: 0.6rem;
-        transition: transform var(--t-fast) var(--ease);
+        margin-bottom: 0.7rem;
+        box-shadow: 0 4px 16px rgba(228, 128, 67, 0.28);
+        transition: transform var(--t-fast) var(--ease),
+                    box-shadow var(--t-fast) var(--ease);
       }
-      .popup-cta:active { transform: scale(0.98); }
+      .popup-cta:active {
+        transform: scale(0.97);
+        box-shadow: 0 2px 8px rgba(228, 128, 67, 0.18);
+      }
       .popup-dismiss {
         display: block;
         width: 100%;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 600;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.1em;
         color: var(--ink-soft);
-        background: rgba(42, 26, 14, 0.06);
-        padding: 0.78rem 1rem;
+        padding: 0.75rem 1rem;
         border-radius: 999px;
+        transition: color var(--t-fast);
       }
+      .popup-dismiss:active { color: var(--ink); }
 
       /* Restart button shown on every screen except intro */
       .restart-btn {
@@ -735,8 +754,9 @@
          ============================================================ -->
     <section id="screen-community" class="screen">
       <div class="popup">
-        <div class="popup-mark">○</div>
+        <div class="popup-mark">✦</div>
         <div class="popup-num" data-copy="community.num">7,243</div>
+        <div class="popup-divider"></div>
         <p class="popup-line"  data-copy="community.line">People already gathered around this mesa</p>
         <h3 class="popup-title" data-copy="community.title">Leave your trace?</h3>
         <button class="popup-cta"     id="community-join" data-copy="community.cta">Join the community</button>
@@ -860,9 +880,11 @@
       const valleyHint   = valleyScreen.querySelector('.valley-hint');
       let skipTimer      = null;
       let hintVisible    = false;
+      let reverseRAF     = null;
 
       function valleyCleanup() {
         clearTimeout(skipTimer);
+        if (reverseRAF) { cancelAnimationFrame(reverseRAF); reverseRAF = null; }
         skipTimer  = null;
         hintVisible = false;
         valleyScreen.classList.remove('show-hint');
@@ -910,12 +932,26 @@
         state = next;
       }
 
-      // Video ends → freeze on last frame, start 5 s countdown then show "Tap to continue"
+      // Video ends → play in slow reverse, then after 5 s show "Tap to continue"
       valleyVideo.addEventListener('ended', () => {
-        skipTimer = setTimeout(() => {
-          if (state === 'valley' && !hintVisible) {
-            showValleyHint('Tap to continue');
+        let lastTs = null;
+        const REVERSE_SPEED = 0.12; // 12 % of normal speed
+
+        function reverseStep(ts) {
+          if (!lastTs) lastTs = ts;
+          const dt = (ts - lastTs) / 1000;
+          lastTs = ts;
+          if (valleyVideo.currentTime > 0 && state === 'valley') {
+            valleyVideo.currentTime = Math.max(0, valleyVideo.currentTime - dt * REVERSE_SPEED);
+            reverseRAF = requestAnimationFrame(reverseStep);
+          } else {
+            reverseRAF = null;
           }
+        }
+        reverseRAF = requestAnimationFrame(reverseStep);
+
+        skipTimer = setTimeout(() => {
+          if (state === 'valley' && !hintVisible) showValleyHint('Tap to continue');
         }, 5000);
       });
 
@@ -986,11 +1022,40 @@
         }
       });
 
-      document.getElementById('screen-cards').addEventListener('click', (e) => {
-        if (e.target.closest('.restart-btn')) return;
-        if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
-        else goTo('community');
-      });
+      // Cards — swipe left/right + tap to advance
+      (function () {
+        const el = document.getElementById('screen-cards');
+        let startX = 0, startY = 0, didSwipe = false;
+
+        el.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          didSwipe = false;
+        }, { passive: true });
+
+        el.addEventListener('touchend', (e) => {
+          const dx = e.changedTouches[0].clientX - startX;
+          const dy = e.changedTouches[0].clientY - startY;
+          if (Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy)) {
+            didSwipe = true;
+            if (dx < 0) {
+              // swipe left → next
+              if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
+              else goTo('community');
+            } else {
+              // swipe right → previous
+              if (cardIndex > 0) showCard(cardIndex - 1);
+            }
+          }
+        }, { passive: true });
+
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.restart-btn')) return;
+          if (didSwipe) { didSwipe = false; return; }
+          if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
+          else goTo('community');
+        });
+      })();
 
       document.getElementById('community-join').addEventListener('click', () => {
         if (CONTENT.community.joinUrl) {
