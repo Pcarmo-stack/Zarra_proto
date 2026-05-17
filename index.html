@@ -88,9 +88,13 @@
       .screen {
         position: fixed; inset: 0;
         z-index: 5;
-        display: grid;
-        place-items: center;
-        padding: 1.4rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: max(env(safe-area-inset-top, 0px), 1.2rem)
+                 1.4rem
+                 max(env(safe-area-inset-bottom, 0px), 1.2rem);
         opacity: 0;
         visibility: hidden;
         transition: opacity var(--t-med) var(--ease),
@@ -393,18 +397,12 @@
         padding: 0;
       }
 
-      /* Panel slides up as a unit */
-      .cards-panel {
-        transform: translateY(100%);
-        transition: transform 0.38s var(--ease-out);
-      }
-      #screen-cards.is-active .cards-panel {
-        transform: translateY(0);
-      }
+      /* Panel appears instantly — no competing motion with card animations */
+      .cards-panel { }
 
       /* Carousel viewport */
       .card-viewport {
-        height: 44vh;
+        height: 46vh;
         overflow: hidden;
         position: relative;
       }
@@ -418,77 +416,78 @@
         transition: transform 0.42s var(--ease-out);
       }
 
-      /* Slide-up entrance keyframes */
+      /* Slide-up keyframe — pure translateY + opacity, no scale */
       @keyframes card-rise {
-        from { opacity: 0; transform: translateY(64px) scale(0.93); }
-        to   { opacity: 0.45; transform: translateY(0) scale(0.93); }
-      }
-      @keyframes card-rise-current {
-        from { opacity: 0; transform: translateY(64px) scale(1); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
+        from { opacity: 0; transform: translateY(52px); }
+        to   { opacity: 1; transform: translateY(0); }
       }
 
       /* Individual card */
       .card {
         flex: 0 0 var(--card-w, 76vw);
         height: 100%;
-        border-radius: 18px 18px 0 0;
+        border-radius: 16px 16px 0 0;
         overflow: hidden;
         background: var(--bg-color);
-        display: flex;
-        flex-direction: column;
+        position: relative;
         margin: 0 6px;
-        box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.35);
-        opacity: 0.45;
-        transform: scale(0.93);
-        transition: opacity 0.38s var(--ease-out), transform 0.38s var(--ease-out);
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
+        opacity: 0.5;
+        transition: opacity 0.32s ease;
       }
-      .card.is-current {
-        opacity: 1;
-        transform: scale(1);
-      }
+      .card.is-current { opacity: 1; }
       .card[data-color="orange"] { --bg-color: var(--orange); }
       .card[data-color="olive"]  { --bg-color: var(--olive);  }
       .card[data-color="amber"]  { --bg-color: var(--amber);  }
       .card[data-color="sage"]   { --bg-color: var(--sage);   }
 
-      /* Entrance animation — runs once per screen activation */
+      /* Entrance — staggered slide-up, backwards fill keeps cards hidden during delay */
       #screen-cards.is-active .card {
-        animation: card-rise 0.48s var(--ease-out) backwards;
+        animation: card-rise 0.46s cubic-bezier(0.16, 1, 0.3, 1) backwards;
       }
-      #screen-cards.is-active .card.is-current {
-        animation: card-rise-current 0.48s var(--ease-out) backwards;
-      }
-      #screen-cards.is-active .card:nth-child(1) { animation-delay: 0.10s; }
-      #screen-cards.is-active .card:nth-child(2) { animation-delay: 0.20s; }
-      #screen-cards.is-active .card:nth-child(3) { animation-delay: 0.30s; }
-      #screen-cards.is-active .card:nth-child(4) { animation-delay: 0.40s; }
+      #screen-cards.is-active .card:nth-child(1) { animation-delay: 0.04s; }
+      #screen-cards.is-active .card:nth-child(2) { animation-delay: 0.13s; }
+      #screen-cards.is-active .card:nth-child(3) { animation-delay: 0.22s; }
+      #screen-cards.is-active .card:nth-child(4) { animation-delay: 0.31s; }
 
-      /* Image area — fixed height so every card has identical proportions */
+      /* Image — absolute, fills card, blends into the colour */
       .card-art {
-        height: 90px;
-        flex-shrink: 0;
+        position: absolute;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0.6rem 1rem;
-        background: rgba(0, 0, 0, 0.14);
+        pointer-events: none;
       }
       .card-art img {
-        height: 100%;
-        width: auto;
-        max-width: 60%;
+        width: 65%;
+        height: 65%;
         object-fit: contain;
-        filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.28));
+        opacity: 0.28;
+        mix-blend-mode: luminosity;
+        transform: translateY(-8%);
       }
 
-      /* Text body — identical padding and alignment on every card */
+      /* Gradient: transparent top → solid card colour at bottom for text legibility */
+      .card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to bottom,
+          transparent 20%,
+          rgba(0, 0, 0, 0.15) 55%,
+          rgba(0, 0, 0, 0.55) 100%
+        );
+        pointer-events: none;
+      }
+
+      /* Text body — pinned to the bottom, same structure and padding on every card */
       .card-body {
-        flex: 1 1 auto;
-        padding: 0.75rem 1.1rem 0.8rem;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        padding: 0 1.1rem 1rem;
+        z-index: 1;
       }
       .card-meta {
         display: flex;
@@ -496,28 +495,27 @@
         gap: 0.4em;
         font-size: 0.55rem;
         font-weight: 600;
-        letter-spacing: 0.28em;
+        letter-spacing: 0.3em;
         text-transform: uppercase;
-        color: rgba(255, 246, 228, 0.5);
-        margin: 0 0 0.22rem;
+        color: rgba(255, 246, 228, 0.55);
+        margin: 0 0 0.2rem;
       }
       .card-meta .slash { font-weight: 300; }
-      .card-meta .num   { color: rgba(255, 246, 228, 0.85); }
+      .card-meta .num   { color: rgba(255, 246, 228, 0.9); }
       .card-title {
         font-family: var(--font-display);
-        font-size: 1.5rem;
-        letter-spacing: 0.06em;
+        font-size: 1.6rem;
+        letter-spacing: 0.07em;
         line-height: 1;
         color: #fdf6e3;
-        margin: 0 0 0.38rem;
-        text-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+        margin: 0 0 0.32rem;
+        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
       }
       .card-desc {
         font-size: 0.7rem;
         line-height: 1.45;
-        color: rgba(255, 246, 228, 0.78);
+        color: rgba(255, 246, 228, 0.82);
         margin: 0;
-        flex: 1 1 auto;
       }
 
       /* Hide A-Frame fullscreen / VR / AR buttons */
@@ -532,15 +530,12 @@
         align-items: center;
         justify-content: center;
         gap: 1rem;
-        padding: 0.55rem 1.4rem calc(env(safe-area-inset-bottom, 0) + 0.5rem);
-        background: rgba(14, 9, 3, 0.6);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        padding: 0.55rem 1.4rem calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+        background: rgba(14, 9, 3, 0.65);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
       }
-      .card-progress {
-        display: flex;
-        gap: 0.5rem;
-      }
+      .card-progress { display: flex; gap: 0.5rem; }
       .card-progress .dot {
         width: 6px; height: 6px;
         border-radius: 50%;
@@ -946,12 +941,11 @@
         el.dataset.card  = i;
         el.dataset.color = c.color;
         el.innerHTML = `
-          <div class="card-art"><img src="${c.image}" alt="${c.title}"></div>
+          <div class="card-art"><img src="${c.image}" alt=""></div>
           <div class="card-body">
             <div class="card-meta">
-              <span class="slash">/</span>
               <span class="num">${c.number}</span>
-              <span>·</span>
+              <span class="slash">·</span>
               <span>${c.label}</span>
             </div>
             <h2 class="card-title">${c.title}</h2>
