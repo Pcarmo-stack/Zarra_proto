@@ -345,7 +345,7 @@
                     transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
       }
       #valley-video.is-revealed {
-        opacity: 1;
+        opacity: 0.72;
         transform: scale(1);
       }
       /* Smooth end state — slow zoom + fade instead of jerky frame-seeking reverse */
@@ -468,10 +468,10 @@
         transition: transform 0.42s var(--ease-out);
       }
 
-      /* Slide-up keyframe — pure translateY + opacity, no scale */
+      /* Slide-up keyframe — ends at the same values as the base .card so there is no snap */
       @keyframes card-rise {
-        from { opacity: 0; transform: translateY(52px); }
-        to   { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; transform: translateY(52px) scale(0.93); }
+        to   { opacity: 0.5; transform: translateY(0) scale(0.93); }
       }
 
       /* Individual card */
@@ -485,9 +485,14 @@
         margin: 0 6px;
         box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
         opacity: 0.5;
-        transition: opacity 0.32s ease;
+        transform: scale(0.93);
+        transition: opacity 0.38s ease, transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
       }
-      .card.is-current { opacity: 1; }
+      .card.is-current {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.45);
+      }
       .card[data-color="orange"] { --bg-color: var(--orange); }
       .card[data-color="olive"]  { --bg-color: var(--olive);  }
       .card[data-color="amber"]  { --bg-color: var(--amber);  }
@@ -1168,7 +1173,7 @@
           /* ── TAP ─────────────────────────────────────────────────
              Single clean mid-tone. Short, physical, unobtrusive. */
           tap() {
-            bell(330, 0.16, 0.13);  // E4
+            bell(330, 0.06, 0.13);  // E4
           },
 
           /* ── SWIPE ───────────────────────────────────────────────
@@ -1187,7 +1192,7 @@
             const bp  = ctx.createBiquadFilter();
             bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.0;
             const g   = ctx.createGain();
-            g.gain.setValueAtTime(0.13, now);
+            g.gain.setValueAtTime(0.05, now);
             g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
             src.connect(bp); bp.connect(g); g.connect(out);
             src.start(now);
@@ -1197,14 +1202,14 @@
              C-major triad one octave lower — warm, open, clean.  */
           reveal() {
             [[261.63, 0], [329.63, 0.09], [392.00, 0.18]]  // C4 E4 G4
-              .forEach(([f, offset]) => bell(f, 0.12, 0.45, offset));
+              .forEach(([f, offset]) => bell(f, 0.045, 0.45, offset));
           },
 
           /* ── HINT ────────────────────────────────────────────────
              C4 + G4 perfect fifth — warm, calm, inviting.        */
           hint() {
-            bell(261.63, 0.13, 0.70);  // C4
-            bell(392.00, 0.07, 0.55);  // G4
+            bell(261.63, 0.05, 0.70);  // C4
+            bell(392.00, 0.028, 0.55);  // G4
           },
 
           /* ── TRANSITION ──────────────────────────────────────────
@@ -1217,7 +1222,7 @@
             osc.frequency.setValueAtTime(160, now);
             osc.frequency.exponentialRampToValueAtTime(440, now + 0.12);
             g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.14, now + 0.03);
+            g.gain.linearRampToValueAtTime(0.05, now + 0.03);
             g.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
             osc.connect(g); g.connect(out);
             osc.start(now); osc.stop(now + 0.35);
@@ -1293,7 +1298,7 @@
          ============================================================ */
       const cardTrack = document.getElementById('card-stage');
       const CARD_W_RATIO = 0.76; // 76 vw per card
-      const CARD_GAP     = 10;   // px between cards
+      const CARD_GAP     = 12;   // px between cards — matches CSS margin: 0 6px
 
       function updateTrack() {
         const vw     = window.innerWidth;
@@ -1331,7 +1336,7 @@
 
         // Bridge: auto-advance to community after 2.6 s; tappable to skip
         if (next === 'bridge') {
-          haptic([60, 40, 80]);
+          haptic([80, 50, 120]);
           clearTimeout(bridgeTimer);
           bridgeTimer = setTimeout(() => {
             if (state === 'bridge') goTo('community');
@@ -1374,7 +1379,7 @@
       // Skip — immediately advances to cards, stops video + audio via goTo cleanup
       document.getElementById('valley-skip-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        haptic([55]);
+        haptic([100]);
         SFX.play('tap');
         goTo('cards');
         showCard(0);
@@ -1460,7 +1465,7 @@
          ============================================================ */
       document.getElementById('start-btn').addEventListener('click', async () => {
         SFX.play('tap');
-        haptic([55]);
+        haptic([100]);
         goTo('scan');
         const startMindAR = async () => {
           try {
@@ -1478,7 +1483,7 @@
       target.addEventListener('targetFound', () => {
         if (state === 'scan') {
           // Discovery haptic — double pulse
-          haptic([60, 50, 100]);
+          haptic([80, 60, 140]);
           SFX.play('transition');
 
           // Fire ar-enter on all animated AR entities so they spring to life
@@ -1489,7 +1494,6 @@
         }
       });
       target.addEventListener('targetLost', () => {
-        if (state === 'detected') goTo('scan');
         // Reset ar animations
         document.querySelectorAll('#valley-scene a-image, #valley-scene a-circle')
           .forEach(el => el.dispatchEvent(new CustomEvent('ar-exit')));
@@ -1500,7 +1504,7 @@
       });
 
       document.getElementById('detected-cta').addEventListener('click', () => {
-        haptic([55]);
+        haptic([100]);
         SFX.play('tap');
         goTo('valley');
       });
@@ -1530,7 +1534,7 @@
           const dy = e.changedTouches[0].clientY - startY;
           if (Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy)) {
             didSwipe = true;
-            haptic([55]);
+            haptic([100]);
             SFX.play('swipe');
             if (dx < 0) {
               if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
@@ -1555,21 +1559,21 @@
       document.getElementById('screen-bridge').addEventListener('click', () => {
         if (state === 'bridge') {
           clearTimeout(bridgeTimer);
-          haptic([55]);
+          haptic([100]);
           SFX.play('transition');
           goTo('community');
         }
       });
 
       document.getElementById('community-join').addEventListener('click', () => {
-        haptic([55]);
+        haptic([100]);
         SFX.play('tap');
         if (CONTENT.community.joinUrl) {
           window.open(CONTENT.community.joinUrl, '_blank', 'noopener');
         }
       });
-      document.getElementById('community-skip').addEventListener('click', () => { haptic([55]); SFX.play('tap'); restart(); });
-      document.getElementById('restart-btn').addEventListener('click', () => { haptic([55]); SFX.play('tap'); restart(); });
+      document.getElementById('community-skip').addEventListener('click', () => { haptic([100]); SFX.play('tap'); restart(); });
+      document.getElementById('restart-btn').addEventListener('click', () => { haptic([100]); SFX.play('tap'); restart(); });
 
       // Mute button
       document.getElementById('valley-mute-btn').addEventListener('click', (e) => {
