@@ -870,24 +870,8 @@
 
       <a-entity id="target" mindar-image-target="targetIndex: 0">
 
-        <!-- Valley "grows from the can": starts very small, pushes toward camera on ar-enter -->
-        <a-entity id="valley-scene" billboard position="0 0 -0.06"
-          animation__push="property: position; from: 0 0 -0.06; to: 0 0 0; dur: 1800; easing: easeOutCubic; startEvents: ar-enter">
-          <!-- Parallax: outer entity drifts on Y, inner drifts on X -->
-          <a-entity
-            animation__drift_y="property: position; from: 0 -0.022 0; to: 0 0.022 0; dur: 11000; dir: alternate; loop: true; easing: easeInOutSine;">
-            <a-entity
-              animation__drift_x="property: position; from: -0.028 0 0; to: 0.028 0 0; dur: 9000; dir: alternate; loop: true; easing: easeInOutSine;">
-              <!-- Starts tiny (grows-from-can), scales to full size, then slow oscillating zoom -->
-              <a-image src="#img-landscape"
-                position="0 0 -0.05" scale="0.07 0.15 1" opacity="0" transparent="true"
-                animation__grow="property: scale; from: 0.07 0.15 1; to: 0.52 1.125 1; dur: 1600; easing: easeOutExpo; startEvents: ar-enter"
-                animation__op="property: opacity; to: 0.88; dur: 900; easing: easeOutCubic; startEvents: ar-enter"
-                animation__exit_op="property: opacity; to: 0; dur: 500; startEvents: ar-exit"
-                animation__zoom="property: scale; from: 0.52 1.125 1; to: 0.572 1.238 1; dur: 14000; dir: alternate; loop: true; easing: easeInOutSine; delay: 1600; startEvents: ar-enter">
-              </a-image>
-            </a-entity>
-          </a-entity>
+        <!-- Particles / dust / mist emerge from the can when detected -->
+        <a-entity id="valley-scene" billboard position="0 0 0">
           <!-- Particles / dust / mist emerge from the can -->
           <a-entity id="particles">
             <!-- dust motes -->
@@ -1347,7 +1331,7 @@
 
         // Bridge: auto-advance to community after 2.6 s; tappable to skip
         if (next === 'bridge') {
-          haptic([20, 40, 15]);
+          haptic([60, 40, 80]);
           clearTimeout(bridgeTimer);
           bridgeTimer = setTimeout(() => {
             if (state === 'bridge') goTo('community');
@@ -1390,7 +1374,7 @@
       // Skip — immediately advances to cards, stops video + audio via goTo cleanup
       document.getElementById('valley-skip-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        haptic([8]);
+        haptic([55]);
         SFX.play('tap');
         goTo('cards');
         showCard(0);
@@ -1476,7 +1460,7 @@
          ============================================================ */
       document.getElementById('start-btn').addEventListener('click', async () => {
         SFX.play('tap');
-        haptic([8]);
+        haptic([55]);
         goTo('scan');
         const startMindAR = async () => {
           try {
@@ -1494,7 +1478,7 @@
       target.addEventListener('targetFound', () => {
         if (state === 'scan') {
           // Discovery haptic — double pulse
-          haptic([15, 60, 25]);
+          haptic([60, 50, 100]);
           SFX.play('transition');
 
           // Fire ar-enter on all animated AR entities so they spring to life
@@ -1516,7 +1500,7 @@
       });
 
       document.getElementById('detected-cta').addEventListener('click', () => {
-        haptic([10]);
+        haptic([55]);
         SFX.play('tap');
         goTo('valley');
       });
@@ -1546,7 +1530,7 @@
           const dy = e.changedTouches[0].clientY - startY;
           if (Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy)) {
             didSwipe = true;
-            haptic([8]);
+            haptic([55]);
             SFX.play('swipe');
             if (dx < 0) {
               if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
@@ -1571,20 +1555,21 @@
       document.getElementById('screen-bridge').addEventListener('click', () => {
         if (state === 'bridge') {
           clearTimeout(bridgeTimer);
-          haptic([10]);
+          haptic([55]);
           SFX.play('transition');
           goTo('community');
         }
       });
 
       document.getElementById('community-join').addEventListener('click', () => {
+        haptic([55]);
         SFX.play('tap');
         if (CONTENT.community.joinUrl) {
           window.open(CONTENT.community.joinUrl, '_blank', 'noopener');
         }
       });
-      document.getElementById('community-skip').addEventListener('click', () => { SFX.play('tap'); restart(); });
-      document.getElementById('restart-btn').addEventListener('click', () => { SFX.play('tap'); restart(); });
+      document.getElementById('community-skip').addEventListener('click', () => { haptic([55]); SFX.play('tap'); restart(); });
+      document.getElementById('restart-btn').addEventListener('click', () => { haptic([55]); SFX.play('tap'); restart(); });
 
       // Mute button
       document.getElementById('valley-mute-btn').addEventListener('click', (e) => {
