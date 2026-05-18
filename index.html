@@ -539,11 +539,11 @@
         pointer-events: none;
       }
 
-      /* Text body — pinned to the bottom, same structure and padding on every card */
+      /* Text body — raised from the bottom so it clears the floating dots */
       .card-body {
         position: absolute;
         bottom: 0; left: 0; right: 0;
-        padding: 0 1.1rem 1rem;
+        padding: 0 1.2rem 3.8rem;
         z-index: 1;
       }
       .card-meta {
@@ -1272,22 +1272,10 @@
       const valleyAudio  = document.getElementById('valley-audio');
       const valleyScreen = document.getElementById('screen-valley');
       const valleyHint   = valleyScreen.querySelector('.valley-hint');
-      let skipTimer      = null;
-      let hintVisible    = false;
-      let isLooping      = false;
-      const LOOP_BACK_SECS = 5; // seconds from end to loop back to
-
-      function startEndLoop() {
-        isLooping = true;
-        const loopStart = Math.max(0, (valleyVideo.duration || 30) - LOOP_BACK_SECS);
-        valleyVideo.playbackRate = 0.35; // slow, cinematic
-        valleyVideo.currentTime  = loopStart;
-        valleyVideo.play().catch(() => {});
-      }
+      let skipTimer  = null;
+      let hintVisible = false;
 
       function valleyCleanup() {
-        isLooping = false;
-        valleyVideo.playbackRate = 1;
         clearTimeout(skipTimer);
         skipTimer   = null;
         hintVisible = false;
@@ -1365,21 +1353,12 @@
         else Particles.stop();
       }
 
-      // Video ends → smooth CSS zoom-out, hint appears immediately
+      // Video ends → freeze on last frame, show hint
       valleyVideo.addEventListener('ended', () => {
-        // Re-loop: seek back and play again at slow speed
-        if (isLooping) {
-          const loopStart = Math.max(0, (valleyVideo.duration || 30) - LOOP_BACK_SECS);
-          valleyVideo.currentTime = loopStart;
-          valleyVideo.play().catch(() => {});
-          return;
-        }
-        // First end: show hint and start cinematic loop
         valleyVideo.classList.add('is-ending');
         if (state === 'valley' && !hintVisible) {
           showValleyHint('Tap to continue');
           SFX.play('hint');
-          startEndLoop();
         }
       });
 
