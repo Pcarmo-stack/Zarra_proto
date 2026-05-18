@@ -449,12 +449,11 @@
         padding: 0;
       }
 
-      /* Panel appears instantly — no competing motion with card animations */
-      .cards-panel { }
+      .cards-panel { position: relative; width: 100%; }
 
-      /* Carousel viewport */
+      /* Carousel viewport — fills to the screen bottom so card bottoms exit the frame */
       .card-viewport {
-        height: 46vh;
+        height: 64vh;
         overflow: hidden;
         position: relative;
       }
@@ -476,7 +475,7 @@
 
       /* Individual card */
       .card {
-        flex: 0 0 var(--card-w, 76vw);
+        flex: 0 0 var(--card-w, 82vw);
         height: 100%;
         border-radius: 16px 16px 0 0;
         overflow: hidden;
@@ -523,17 +522,6 @@
         opacity: 0.92;
         transform: translateY(-6%);
         filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55)) brightness(1.08) contrast(1.05);
-      }
-
-      /* Dark strip at the absolute bottom edge — masks any sub-pixel bleed from the card colour */
-      .card::before {
-        content: '';
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        height: 4px;
-        background: rgba(0, 0, 0, 0.92);
-        z-index: 2;
-        pointer-events: none;
       }
 
       /* Gradient: covers bottom half so any amount of text stays legible */
@@ -593,16 +581,20 @@
         display: none !important;
       }
 
-      /* Progress + swipe hint strip below the cards */
+      /* Progress dots — float over the bottom of the cards, no background bar */
       .card-footer {
+        position: absolute;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+        left: 0; right: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 1rem;
-        padding: 0.55rem 1.4rem calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
-        background: rgba(14, 9, 3, 0.65);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        padding: 0 1.4rem;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        pointer-events: none;
       }
       .card-progress { display: flex; gap: 0.5rem; }
       .card-progress .dot {
@@ -1282,27 +1274,20 @@
       const valleyHint   = valleyScreen.querySelector('.valley-hint');
       let skipTimer      = null;
       let hintVisible    = false;
-      let reverseRaf     = null;
+      let isLooping      = false;
+      const LOOP_BACK_SECS = 5; // seconds from end to loop back to
 
-      function startReversePlayback() {
-        if (reverseRaf) cancelAnimationFrame(reverseRaf);
-        let lastTs = null;
-        function step(ts) {
-          if (state !== 'valley') { reverseRaf = null; return; }
-          if (lastTs !== null) {
-            const dt   = (ts - lastTs) / 1000;
-            const next = Math.max(0, valleyVideo.currentTime - dt * 0.28);
-            try { valleyVideo.currentTime = next; } catch (_) {}
-            if (next <= 0) { reverseRaf = null; return; }
-          }
-          lastTs = ts;
-          reverseRaf = requestAnimationFrame(step);
-        }
-        reverseRaf = requestAnimationFrame(step);
+      function startEndLoop() {
+        isLooping = true;
+        const loopStart = Math.max(0, (valleyVideo.duration || 30) - LOOP_BACK_SECS);
+        valleyVideo.playbackRate = 0.35; // slow, cinematic
+        valleyVideo.currentTime  = loopStart;
+        valleyVideo.play().catch(() => {});
       }
 
       function valleyCleanup() {
-        if (reverseRaf) { cancelAnimationFrame(reverseRaf); reverseRaf = null; }
+        isLooping = false;
+        valleyVideo.playbackRate = 1;
         clearTimeout(skipTimer);
         skipTimer   = null;
         hintVisible = false;
@@ -1328,7 +1313,7 @@
          visible on both sides.
          ============================================================ */
       const cardTrack = document.getElementById('card-stage');
-      const CARD_W_RATIO = 0.76; // 76 vw per card
+      const CARD_W_RATIO = 0.82; // 82 vw per card
       const CARD_GAP     = 12;   // px between cards — matches CSS margin: 0 6px
 
       function updateTrack() {
@@ -1382,11 +1367,19 @@
 
       // Video ends → smooth CSS zoom-out, hint appears immediately
       valleyVideo.addEventListener('ended', () => {
+        // Re-loop: seek back and play again at slow speed
+        if (isLooping) {
+          const loopStart = Math.max(0, (valleyVideo.duration || 30) - LOOP_BACK_SECS);
+          valleyVideo.currentTime = loopStart;
+          valleyVideo.play().catch(() => {});
+          return;
+        }
+        // First end: show hint and start cinematic loop
         valleyVideo.classList.add('is-ending');
         if (state === 'valley' && !hintVisible) {
           showValleyHint('Tap to continue');
           SFX.play('hint');
-          startReversePlayback();
+          startEndLoop();
         }
       });
 
