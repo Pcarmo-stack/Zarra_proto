@@ -762,6 +762,64 @@
       #screen-community.is-active .popup-cta     { animation: pop-up    0.45s var(--ease-out) 1.10s both; }
       #screen-community.is-active .popup-dismiss { animation: pop-up    0.40s var(--ease-out) 1.25s both; }
 
+      /* ----------  CARD FLAVOR TAG (card 1)  ---------- */
+      .card-flavor {
+        font-size: 0.55rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(255, 246, 228, 0.48);
+        margin: 0.55rem 0 0;
+        font-family: var(--font-body);
+      }
+
+      /* ----------  CARD 2 — INGREDIENTS: image rises from below  ---------- */
+      .card--ingredients .card-art img {
+        opacity: 0;
+        transform: translateY(20px) translateY(-6%);
+      }
+      #screen-cards.is-active .card--ingredients .card-art img {
+        animation: ingredient-emerge 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+      }
+      @keyframes ingredient-emerge {
+        from {
+          opacity: 0;
+          transform: translateY(24px) translateY(-6%) scale(0.84);
+          filter: blur(2px) drop-shadow(0 10px 24px rgba(0,0,0,0.55)) brightness(1.08) contrast(1.05);
+        }
+        to {
+          opacity: 0.92;
+          transform: translateY(-6%) scale(1);
+          filter: drop-shadow(0 10px 24px rgba(0,0,0,0.55)) brightness(1.08) contrast(1.05);
+        }
+      }
+
+      /* ----------  STATE 5.5 · BRIDGE TRANSITION  ---------- */
+      #screen-bridge {
+        background: rgba(10, 7, 3, 0.94);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+      }
+      .bridge-inner {
+        text-align: center;
+        padding: 2rem;
+      }
+      .bridge-text {
+        font-family: var(--font-display);
+        font-size: clamp(1.45rem, 5.2vw, 2rem);
+        color: #fdf6e3;
+        margin: 0;
+        letter-spacing: 0.06em;
+        line-height: 1.55;
+        opacity: 0;
+      }
+      #screen-bridge.is-active .bridge-text {
+        animation: bridge-rise 1s var(--ease-out) 0.18s forwards;
+      }
+      @keyframes bridge-rise {
+        from { opacity: 0; transform: translateY(22px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
       /* Restart button shown on every screen except intro */
       .restart-btn {
         position: fixed;
@@ -812,37 +870,52 @@
 
       <a-entity id="target" mindar-image-target="targetIndex: 0">
 
-        <a-entity id="valley-scene" billboard position="0 0 0">
+        <!-- Valley "grows from the can": starts very small, pushes toward camera on ar-enter -->
+        <a-entity id="valley-scene" billboard position="0 0 -0.06"
+          animation__push="property: position; from: 0 0 -0.06; to: 0 0 0; dur: 1800; easing: easeOutCubic; startEvents: ar-enter">
           <!-- Parallax: outer entity drifts on Y, inner drifts on X -->
           <a-entity
             animation__drift_y="property: position; from: 0 -0.022 0; to: 0 0.022 0; dur: 11000; dir: alternate; loop: true; easing: easeInOutSine;">
             <a-entity
               animation__drift_x="property: position; from: -0.028 0 0; to: 0.028 0 0; dur: 9000; dir: alternate; loop: true; easing: easeInOutSine;">
-              <!-- Scale 0.52 × 1.125 preserves 740×1600 ratio and sits slightly smaller -->
+              <!-- Starts tiny (grows-from-can), scales to full size, then slow oscillating zoom -->
               <a-image src="#img-landscape"
-                position="0 0 -0.05" scale="0.52 1.125 1" opacity="0" transparent="true"
-                animation__op="property: opacity; to: 0.88; dur: 1400; easing: easeOutCubic; startEvents: ar-enter"
+                position="0 0 -0.05" scale="0.07 0.15 1" opacity="0" transparent="true"
+                animation__grow="property: scale; from: 0.07 0.15 1; to: 0.52 1.125 1; dur: 1600; easing: easeOutExpo; startEvents: ar-enter"
+                animation__op="property: opacity; to: 0.88; dur: 900; easing: easeOutCubic; startEvents: ar-enter"
                 animation__exit_op="property: opacity; to: 0; dur: 500; startEvents: ar-exit"
-                animation__zoom="property: scale; from: 0.52 1.125 1; to: 0.572 1.238 1; dur: 14000; dir: alternate; loop: true; easing: easeInOutSine;">
+                animation__zoom="property: scale; from: 0.52 1.125 1; to: 0.572 1.238 1; dur: 14000; dir: alternate; loop: true; easing: easeInOutSine; delay: 1600; startEvents: ar-enter">
               </a-image>
             </a-entity>
           </a-entity>
+          <!-- Particles / dust / mist emerge from the can -->
           <a-entity id="particles">
+            <!-- dust motes -->
+            <a-circle radius="0.003" color="#fff8e8" opacity="0" position="-0.05 -0.2 0.02"
+              animation__up="property: position; from: -0.05 -0.22 0.02; to: -0.08 0.38 0.02; dur: 5800; loop: true; easing: linear; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.6; dur: 1400; dir: alternate; loop: true; startEvents: ar-enter"></a-circle>
             <a-circle radius="0.006" color="#ffd07a" opacity="0" position="-0.15 -0.25 0.01"
-              animation__up="property: position; from: -0.15 -0.3 0.01; to: -0.18 0.4 0.01; dur: 6500; loop: true; easing: linear; delay: 1500; startEvents: ar-enter"
-              animation__fade="property: opacity; from: 0; to: 0.85; dur: 1800; dir: alternate; loop: true; delay: 1500; startEvents: ar-enter"></a-circle>
+              animation__up="property: position; from: -0.15 -0.28 0.01; to: -0.18 0.4 0.01; dur: 6500; loop: true; easing: linear; delay: 400; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.85; dur: 1800; dir: alternate; loop: true; delay: 400; startEvents: ar-enter"></a-circle>
             <a-circle radius="0.004" color="#fff0c2" opacity="0" position="0.13 -0.25 0.01"
-              animation__up="property: position; from: 0.13 -0.3 0.01; to: 0.1 0.45 0.01; dur: 7500; loop: true; easing: linear; delay: 2300; startEvents: ar-enter"
-              animation__fade="property: opacity; from: 0; to: 0.7; dur: 2100; dir: alternate; loop: true; delay: 2300; startEvents: ar-enter"></a-circle>
+              animation__up="property: position; from: 0.13 -0.28 0.01; to: 0.1 0.45 0.01; dur: 7500; loop: true; easing: linear; delay: 800; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.7; dur: 2100; dir: alternate; loop: true; delay: 800; startEvents: ar-enter"></a-circle>
             <a-circle radius="0.007" color="#ffb86c" opacity="0" position="0.02 -0.25 0.01"
-              animation__up="property: position; from: 0.02 -0.3 0.01; to: 0.04 0.42 0.01; dur: 8200; loop: true; easing: linear; delay: 1900; startEvents: ar-enter"
-              animation__fade="property: opacity; from: 0; to: 0.8; dur: 2500; dir: alternate; loop: true; delay: 1900; startEvents: ar-enter"></a-circle>
+              animation__up="property: position; from: 0.02 -0.28 0.01; to: 0.04 0.42 0.01; dur: 8200; loop: true; easing: linear; delay: 600; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.8; dur: 2500; dir: alternate; loop: true; delay: 600; startEvents: ar-enter"></a-circle>
             <a-circle radius="0.005" color="#ffd07a" opacity="0" position="-0.07 -0.25 0.01"
-              animation__up="property: position; from: -0.07 -0.3 0.01; to: -0.09 0.46 0.01; dur: 7000; loop: true; easing: linear; delay: 2700; startEvents: ar-enter"
-              animation__fade="property: opacity; from: 0; to: 0.75; dur: 1900; dir: alternate; loop: true; delay: 2700; startEvents: ar-enter"></a-circle>
+              animation__up="property: position; from: -0.07 -0.28 0.01; to: -0.09 0.46 0.01; dur: 7000; loop: true; easing: linear; delay: 1000; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.75; dur: 1900; dir: alternate; loop: true; delay: 1000; startEvents: ar-enter"></a-circle>
             <a-circle radius="0.005" color="#ffe4a3" opacity="0" position="0.2 -0.25 0.01"
-              animation__up="property: position; from: 0.2 -0.3 0.01; to: 0.18 0.44 0.01; dur: 9000; loop: true; easing: linear; delay: 3100; startEvents: ar-enter"
-              animation__fade="property: opacity; from: 0; to: 0.7; dur: 2300; dir: alternate; loop: true; delay: 3100; startEvents: ar-enter"></a-circle>
+              animation__up="property: position; from: 0.2 -0.28 0.01; to: 0.18 0.44 0.01; dur: 9000; loop: true; easing: linear; delay: 1400; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.7; dur: 2300; dir: alternate; loop: true; delay: 1400; startEvents: ar-enter"></a-circle>
+            <!-- fine mist layer — very small, slow, pale -->
+            <a-circle radius="0.002" color="#fffdf5" opacity="0" position="0.07 -0.2 0.02"
+              animation__up="property: position; from: 0.07 -0.22 0.02; to: 0.05 0.36 0.02; dur: 9500; loop: true; easing: linear; delay: 200; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.45; dur: 2800; dir: alternate; loop: true; delay: 200; startEvents: ar-enter"></a-circle>
+            <a-circle radius="0.003" color="#ffe8c0" opacity="0" position="-0.18 -0.18 0.02"
+              animation__up="property: position; from: -0.18 -0.22 0.02; to: -0.16 0.42 0.02; dur: 8800; loop: true; easing: linear; delay: 1600; startEvents: ar-enter"
+              animation__fade="property: opacity; from: 0; to: 0.5; dur: 2200; dir: alternate; loop: true; delay: 1600; startEvents: ar-enter"></a-circle>
           </a-entity>
         </a-entity>
       </a-entity>
@@ -929,6 +1002,15 @@
     </section>
 
     <!-- ============================================================
+         STATE 5.5 · BRIDGE TRANSITION
+         ============================================================ -->
+    <section id="screen-bridge" class="screen">
+      <div class="bridge-inner">
+        <p class="bridge-text">The story doesn't end<br>with the bottle.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
          STATE 6 · COMMUNITY POPUP
          ============================================================ -->
     <section id="screen-community" class="screen">
@@ -983,17 +1065,18 @@
         cards: {
           tap: 'Tap to continue',
           items: [
-            { number: '01', label: 'The beer',       title: 'ALBA',
-              desc:  'Soft wheat, bright citrus, mid-morning sun.',
+            { number: '01', label: 'The beer',        title: 'Born in Zarra',
+              desc:   'Crafted in small batches using local inspiration and traditional brewing methods.',
+              flavor: 'Citrus · Wheat · Soft bitterness',
               color: 'orange', image: './assets/can.png' },
-            { number: '02', label: 'The ingredient', title: 'NARANJA',
-              desc:  'Valencia oranges, picked at the end of winter.',
-             color: 'olive',  image: './assets/wheat-orange.png' },
-            { number: '03', label: 'The valley',     title: 'ZARRA',
-              desc:  'A village of 400, a brewery, and a river.',
+            { number: '02', label: 'The ingredients', title: 'What shapes the flavour',
+              desc:   'Water, grain, hops, and the climate of the valley itself.',
+              color: 'olive',  image: './assets/wheat-orange.png' },
+            { number: '03', label: 'The land',        title: 'The valley behind the beer',
+              desc:   "Zarra's dry air, elevation, and natural surroundings influence every brew.",
               color: 'amber',  image: './assets/sun-mountains.png' },
-            { number: '04', label: 'The brewer',     title: 'AITOR',
-              desc:  'Third generation. Vive grande, vive libre.',
+            { number: '04', label: 'The brewery',     title: 'Crafted by people who call this valley home',
+              desc:   'Cervecería de Zarra is built around local identity, slow craft, and shared moments.',
               color: 'sage',   image: './assets/brewery.png' },
           ],
         },
@@ -1023,7 +1106,7 @@
 
       CONTENT.cards.items.forEach((c, i) => {
         const el = document.createElement('div');
-        el.className = 'card';
+        el.className = 'card' + (i === 1 ? ' card--ingredients' : '');
         el.dataset.card  = i;
         el.dataset.color = c.color;
         el.innerHTML = `
@@ -1036,6 +1119,7 @@
             </div>
             <h2 class="card-title">${c.title}</h2>
             <p class="card-desc">${c.desc}</p>
+            ${c.flavor ? `<p class="card-flavor">${c.flavor}</p>` : ''}
           </div>
         `;
         cardStage.appendChild(el);
@@ -1177,9 +1261,15 @@
       /* ============================================================
          STATE MACHINE
          ============================================================ */
-      const STATES = ['intro', 'scan', 'detected', 'valley', 'cards', 'community'];
+      const STATES = ['intro', 'scan', 'detected', 'valley', 'cards', 'bridge', 'community'];
       let state = 'intro';
       let cardIndex = 0;
+      let bridgeTimer = null;
+
+      /* Haptic helper — short pulses for touch feedback */
+      function haptic(pattern) {
+        try { navigator.vibrate && navigator.vibrate(pattern || [10]); } catch (_) {}
+      }
 
       const body   = document.body;
       const scene  = document.querySelector('a-scene');
@@ -1255,6 +1345,17 @@
         body.dataset.state = next;
         state = next;
 
+        // Bridge: auto-advance to community after 2.6 s; tappable to skip
+        if (next === 'bridge') {
+          haptic([20, 40, 15]);
+          clearTimeout(bridgeTimer);
+          bridgeTimer = setTimeout(() => {
+            if (state === 'bridge') goTo('community');
+          }, 2600);
+        } else {
+          clearTimeout(bridgeTimer);
+        }
+
         if (next === 'community') Particles.start();
         else Particles.stop();
       }
@@ -1289,6 +1390,7 @@
       // Skip — immediately advances to cards, stops video + audio via goTo cleanup
       document.getElementById('valley-skip-btn').addEventListener('click', (e) => {
         e.stopPropagation();
+        haptic([8]);
         SFX.play('tap');
         goTo('cards');
         showCard(0);
@@ -1374,6 +1476,7 @@
          ============================================================ */
       document.getElementById('start-btn').addEventListener('click', async () => {
         SFX.play('tap');
+        haptic([8]);
         goTo('scan');
         const startMindAR = async () => {
           try {
@@ -1389,10 +1492,23 @@
       });
 
       target.addEventListener('targetFound', () => {
-        if (state === 'scan') { SFX.play('transition'); goTo('detected'); }
+        if (state === 'scan') {
+          // Discovery haptic — double pulse
+          haptic([15, 60, 25]);
+          SFX.play('transition');
+
+          // Fire ar-enter on all animated AR entities so they spring to life
+          document.querySelectorAll('#valley-scene, #valley-scene a-image, #valley-scene a-circle')
+            .forEach(el => el.dispatchEvent(new CustomEvent('ar-enter')));
+
+          goTo('detected');
+        }
       });
       target.addEventListener('targetLost', () => {
         if (state === 'detected') goTo('scan');
+        // Reset ar animations
+        document.querySelectorAll('#valley-scene a-image, #valley-scene a-circle')
+          .forEach(el => el.dispatchEvent(new CustomEvent('ar-exit')));
       });
 
       window.addEventListener('resize', () => {
@@ -1400,6 +1516,7 @@
       });
 
       document.getElementById('detected-cta').addEventListener('click', () => {
+        haptic([10]);
         SFX.play('tap');
         goTo('valley');
       });
@@ -1429,10 +1546,11 @@
           const dy = e.changedTouches[0].clientY - startY;
           if (Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy)) {
             didSwipe = true;
+            haptic([8]);
             SFX.play('swipe');
             if (dx < 0) {
               if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
-              else { SFX.play('transition'); goTo('community'); }
+              else { SFX.play('transition'); goTo('bridge'); }
             } else {
               if (cardIndex > 0) showCard(cardIndex - 1);
             }
@@ -1442,11 +1560,22 @@
         el.addEventListener('click', (e) => {
           if (e.target.closest('.restart-btn')) return;
           if (didSwipe) { didSwipe = false; return; }
+          haptic([8]);
           SFX.play('swipe');
           if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
-          else { SFX.play('transition'); goTo('community'); }
+          else { SFX.play('transition'); goTo('bridge'); }
         });
       })();
+
+      // Bridge — tap anywhere to skip the auto-advance timer
+      document.getElementById('screen-bridge').addEventListener('click', () => {
+        if (state === 'bridge') {
+          clearTimeout(bridgeTimer);
+          haptic([10]);
+          SFX.play('transition');
+          goTo('community');
+        }
+      });
 
       document.getElementById('community-join').addEventListener('click', () => {
         SFX.play('tap');
@@ -1491,8 +1620,9 @@
         else if (state === 'valley')   { goTo('cards'); showCard(0); }
         else if (state === 'cards') {
           if (cardIndex < CONTENT.cards.items.length - 1) showCard(cardIndex + 1);
-          else goTo('community');
+          else goTo('bridge');
         }
+        else if (state === 'bridge')    goTo('community');
         else if (state === 'community') restart();
       }
       function retreat() {
